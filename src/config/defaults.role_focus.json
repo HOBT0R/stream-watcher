@@ -1,0 +1,50 @@
+{
+    "channels": {
+        "kaicenat_live": {
+            "channelName": "kaicenat",
+            "displayName": "KaiCenat",
+            "group": "A",
+            "description": "Popular Streamer - Just Chatting",
+            "isActive": true,
+            "role": "host"
+        },
+        "xqc_live": {
+            "channelName": "xqc",
+            "displayName": "xQc",
+            "group": "B",
+            "description": "Popular Streamer - Mario Kart World",
+            "isActive": true,
+            "role": "runner"
+        },
+        "shroud_live": {
+            "channelName": "shroud",
+            "displayName": "shroud",
+            "group": "C",
+            "description": "Popular Streamer - Dune: Awakening",
+            "isActive": true,
+            "role": "tech"
+        },
+        "hasanabi_live": {
+            "channelName": "hasanabi",
+            "displayName": "HasanAbi",
+            "group": "A",
+            "description": "News & Politics Streamer",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "jynxzi_live": {
+            "channelName": "jynxzi",
+            "displayName": "Jynxzi",
+            "group": "B",
+            "description": "Clash Royale Streamer",
+            "isActive": true,
+            "role": "runner"
+        }
+    },
+    "preferences": {
+        "viewMode": "grid",
+        "pollInterval": 60,
+        "showOffline": true,
+        "themeMode": "light"
+    }
+} 

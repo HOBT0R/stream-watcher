@@ -1,0 +1,202 @@
+{
+    "channels": {
+        "ndzjdbyygfuljodpgarp0ehqw": {
+            "channelName": "ndzjdbyygfuljodpgarp0ehqw",
+            "displayName": "Speedromizer Dummy Channel 1",
+            "group": "A",
+            "description": "Runner A1",
+            "isActive": true,
+            "role": "runner"
+        },
+        "syopkxqmx24hhrc7wnsidvmlp": {
+            "channelName": "syopkxqmx24hhrc7wnsidvmlp",
+            "displayName": "Speedromizer Dummy Channel 2",
+            "group": "A",
+            "description": "Runner A2",
+            "isActive": true,
+            "role": "runner"
+        },
+        "afrggh4gnis5opnuhuwhsekyf": {
+            "channelName": "afrggh4gnis5opnuhuwhsekyf",
+            "displayName": "Speedromizer Dummy Channel 3",
+            "group": "A",
+            "description": "Comm A1",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "qwidleepfp4b1xoelz6bckvhq": {
+            "channelName": "qwidleepfp4b1xoelz6bckvhq",
+            "displayName": "Speedromizer Dummy Channel 4",
+            "group": "A",
+            "description": "Comm A2",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "clug1cjslwbj6zneohlwnguhc": {
+            "channelName": "clug1cjslwbj6zneohlwnguhc",
+            "displayName": "Speedromizer Dummy Channel 5",
+            "group": "A",
+            "description": "Comm A3",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "4lbx3pudfzow2oj4nixktx992": {
+            "channelName": "4lbx3pudfzow2oj4nixktx992",
+            "displayName": "Speedromizer Dummy Channel 6",
+            "group": "A",
+            "description": "Comm A4",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "bdxue31092bxvnc2um3xqccwq": {
+            "channelName": "bdxue31092bxvnc2um3xqccwq",
+            "displayName": "Speedromizer Dummy Channel 7",
+            "group": "B",
+            "description": "Runner B1",
+            "isActive": true,
+            "role": "runner"
+        },
+        "kqyvvduqe3mhvpcptafuq4o5d": {
+            "channelName": "kqyvvduqe3mhvpcptafuq4o5d",
+            "displayName": "Speedromizer Dummy Channel 8",
+            "group": "B",
+            "description": "Runner B2",
+            "isActive": true,
+            "role": "runner"
+        },
+        "uvmhtaqwlvqlx6iycarnfeudx": {
+            "channelName": "uvmhtaqwlvqlx6iycarnfeudx",
+            "displayName": "Speedromizer Dummy Channel 9",
+            "group": "B",
+            "description": "Comm B1",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "mzpnirhkhzpfrl9in1qiulapn": {
+            "channelName": "mzpnirhkhzpfrl9in1qiulapn",
+            "displayName": "Speedromizer Dummy Channel 10",
+            "group": "B",
+            "description": "Comm B2",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "zdm99jvwbgbf8xuybqvyapdcr": {
+            "channelName": "zdm99jvwbgbf8xuybqvyapdcr",
+            "displayName": "Speedromizer Dummy Channel 11",
+            "group": "B",
+            "description": "Comm B3",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "i95fbs2cuthrxkedr09lbtdcc": {
+            "channelName": "i95fbs2cuthrxkedr09lbtdcc",
+            "displayName": "Speedromizer Dummy Channel 12",
+            "group": "B",
+            "description": "Comm B4",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "uxdpvcvaj8ge9i3k7ketl4a5j": {
+            "channelName": "uxdpvcvaj8ge9i3k7ketl4a5j",
+            "displayName": "Speedromizer Dummy Channel 13",
+            "group": "C",
+            "description": "Runner C1",
+            "isActive": true,
+            "role": "runner"
+        },
+        "iwekvlpftiibcpav7hnz8lm6s": {
+            "channelName": "iwekvlpftiibcpav7hnz8lm6s",
+            "displayName": "Speedromizer Dummy Channel 14",
+            "group": "C",
+            "description": "Runner C2",
+            "isActive": true,
+            "role": "runner"
+        },
+        "r1tq7uhdxyqr5yln8jeq8bquz": {
+            "channelName": "r1tq7uhdxyqr5yln8jeq8bquz",
+            "displayName": "Speedromizer Dummy Channel 15",
+            "group": "C",
+            "description": "Comm C1",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "vou6radbamuh5blqa1i6hjlwl": {
+            "channelName": "vou6radbamuh5blqa1i6hjlwl",
+            "displayName": "Speedromizer Dummy Channel 16",
+            "group": "C",
+            "description": "Comm C2",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "5k2gxakvbkws0pkheepgxji5g": {
+            "channelName": "5k2gxakvbkws0pkheepgxji5g",
+            "displayName": "Speedromizer Dummy Channel 17",
+            "group": "C",
+            "description": "Comm C3",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "neepvyiwsexntvorat8m7zwqt": {
+            "channelName": "neepvyiwsexntvorat8m7zwqt",
+            "displayName": "Speedromizer Dummy Channel 18",
+            "group": "C",
+            "description": "Comm C4",
+            "isActive": true,
+            "role": "commentator"
+        },
+        "kuahpliqh1b7bsayf95xmnyfx": {
+            "channelName": "kuahpliqh1b7bsayf95xmnyfx",
+            "displayName": "Speedromizer Dummy Channel 19",
+            "group": "HOST",
+            "description": "Host 1",
+            "isActive": true,
+            "role": "host"
+        },
+        "53dtyqht5u3qxb10sfxv6mytz": {
+            "channelName": "53dtyqht5u3qxb10sfxv6mytz",
+            "displayName": "Speedromizer Dummy Channel 20",
+            "group": "HOST",
+            "description": "Host 2",
+            "isActive": true,
+            "role": "host"
+        },
+        "ocjmsv9x8xqm4pnp65mzjc25q": {
+            "channelName": "ocjmsv9x8xqm4pnp65mzjc25q",
+            "displayName": "Speedromizer Dummy Channel 21",
+            "group": "HOST",
+            "description": "Host 3",
+            "isActive": true,
+            "role": "host"
+        },
+        "wmihgybu2cj4bicql4srnhntd": {
+            "channelName": "wmihgybu2cj4bicql4srnhntd",
+            "displayName": "Speedromizer Dummy Channel 22",
+            "group": "TECH",
+            "description": "Tech Check 1",
+            "isActive": true,
+            "role": "tech"
+        },
+        "mgcabyrau39aitrcbrj6z2bs6": {
+            "channelName": "mgcabyrau39aitrcbrj6z2bs6",
+            "displayName": "Speedromizer Dummy Channel 23",
+            "group": "TECH",
+            "description": "Tech Check 2",
+            "isActive": true,
+            "role": "tech"
+        },
+        "ww1whskw9sjysmjqkemg4edbm": {
+            "channelName": "ww1whskw9sjysmjqkemg4edbm",
+            "displayName": "Speedromizer Dummy Channel 24",
+            "group": "TECH",
+            "description": "Tech Check 3",
+            "isActive": true,
+            "role": "tech"
+        }
+    },
+    "preferences": {
+        "viewMode": "grid",
+        "pollInterval": 60,
+        "showOffline": true,
+        "themeMode": "light"
+    }
+} 
