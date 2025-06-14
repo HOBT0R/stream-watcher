@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ThemeProvider } from '../../../contexts/ThemeContext';
 import { ChannelGroup } from '../../../components/MainLayout/components/ChannelDashboard/components/ChannelGroup';
 import { ChannelProvider } from '../../../contexts/ChannelContext';
+import { ChannelEditProvider } from '../../../contexts/ChannelEditContext';
 
 const meta = {
   title: 'Components/Channels/ChannelGroup',
@@ -18,7 +19,12 @@ const meta = {
     (Story) => (
       <ThemeProvider>
         <ChannelProvider pollingIntervalSeconds={30}>
-          <Story />
+          <ChannelEditProvider
+            onAddChannel={(channel) => console.log('Add channel:', channel)}
+            onUpdateChannel={(channelName, updates) => console.log('Update channel:', channelName, updates)}
+          >
+            <Story />
+          </ChannelEditProvider>
         </ChannelProvider>
       </ThemeProvider>
     )

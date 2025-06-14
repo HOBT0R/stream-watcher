@@ -1,10 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { ChannelGroup } from './ChannelGroup';
 import { ThemeProvider } from '../../../../../../contexts/ThemeContext';
 import * as ChannelContext from '../../../../../../contexts/ChannelContext';
 import { ChannelState } from '../../../../../../types/schema';
+import { ChannelEditProvider } from '../../../../../../contexts/ChannelEditContext';
 
 const mockChannels: ChannelState[] = [
   { channelName: 'runner1', displayName: 'Runner 1', status: 'online', role: 'runner', group: 'A', isActive: true, lastUpdated: new Date().toISOString() },
@@ -14,16 +15,16 @@ const mockChannels: ChannelState[] = [
 describe('ChannelGroup', () => {
     beforeEach(() => {
         vi.spyOn(ChannelContext, 'useChannels').mockReturnValue({
+            channels: [],
             channelStates: mockChannels,
             isLoading: false,
             error: null,
-            refetchChannels: () => {},
-            channels: [],
-            handleAddChannel: () => {},
-            handleUpdateChannel: () => {},
-            handleDeleteChannel: () => {},
-            handleImport: () => {},
-            handleExport: () => {},
+            refetchChannels: vi.fn(),
+            handleAddChannel: vi.fn(),
+            handleUpdateChannel: vi.fn(),
+            handleDeleteChannel: vi.fn(),
+            handleImport: vi.fn(),
+            handleExport: vi.fn(),
         });
     });
 
@@ -41,7 +42,12 @@ describe('ChannelGroup', () => {
     return render(
       <ThemeProvider>
         <ChannelContext.ChannelProvider pollingIntervalSeconds={30}>
-          <ChannelGroup {...defaultProps} {...props} />
+            <ChannelEditProvider
+                onAddChannel={(channel) => console.log('Add channel:', channel)}
+                onUpdateChannel={(channelName, updates) => console.log('Update channel:', channelName, updates)}
+            >
+                <ChannelGroup {...defaultProps} {...props} />
+            </ChannelEditProvider>
         </ChannelContext.ChannelProvider>
       </ThemeProvider>
     );

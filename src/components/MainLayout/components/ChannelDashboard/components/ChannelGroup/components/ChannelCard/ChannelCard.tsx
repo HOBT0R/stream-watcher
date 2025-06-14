@@ -9,13 +9,19 @@ import {
     OpenInNew as OpenInNewIcon, 
     ContentCopy as ContentCopyIcon 
 } from '@mui/icons-material';
-import type { ChannelState } from '../../../../../../../../types/schema';
+import EditIcon from '@mui/icons-material/Edit';
+import type { ChannelState, ChannelConfig } from '../../../../../../../../types/schema';
 import { StreamKeyDialog } from './components/StreamKeyDialog/StreamKeyDialog';
 import { getTwitchChannelUrl } from '../../../../../../../../utils/twitch';
+import { useChannelEdit } from '../../../../../../../../contexts/ChannelEditContext';
 
 // ================ Types ================
 export interface ChannelCardProps extends ChannelState {
     searchText?: string;
+    channelName: string;
+    onCopy: () => void;
+    onOpenStreamKey: () => void;
+    onEdit: () => void;
 }
 
 // ================ Layout component ================
@@ -73,12 +79,14 @@ const ChannelNameWithActions = ({
     channelName,
     searchText,
     onCopy,
-    onOpenStreamKey
+    onOpenStreamKey,
+    onEdit
 }: {
     channelName: string;
     searchText?: string;
     onCopy: () => void;
     onOpenStreamKey: () => void;
+    onEdit: () => void;
 }) => (
     <>
         <Typography 
@@ -91,6 +99,7 @@ const ChannelNameWithActions = ({
         </Typography>
         <CopyButton onCopy={onCopy} />
         <StreamKeyButton onOpenStreamKey={onOpenStreamKey} />
+        <EditButton onEdit={onEdit} />
     </>
 );
 
@@ -115,6 +124,14 @@ const OpenButton = ({ twitchUrl }: { twitchUrl: string }) => (
       <Link href={twitchUrl} target="_blank" rel="noopener noreferrer">
         <OpenInNewIcon fontSize="small" />
       </Link>
+    </Tooltip>
+);
+
+const EditButton = ({ onEdit }: { onEdit: () => void }) => (
+    <Tooltip title="Edit Channel">
+        <IconButton size="small" onClick={onEdit}>
+            <EditIcon fontSize="small" />
+        </IconButton>
     </Tooltip>
 );
 
@@ -190,14 +207,29 @@ export const ChannelCard = ({
     description,
     lastUpdated,
     role,
-    searchText
+    searchText,
+    isActive,
+    group
 }: ChannelCardProps) => {
     const [streamKeyDialogOpen, setStreamKeyDialogOpen] = useState(false);
     const [showCopySnackbar, setShowCopySnackbar] = useState(false);
+    const { openChannelEditDialog } = useChannelEdit();
 
     const handleCopyChannelName = async () => {
         await navigator.clipboard.writeText(channelName);
         setShowCopySnackbar(true);
+    };
+
+    const handleEdit = () => {
+        const channelConfig: ChannelConfig = {
+            channelName,
+            displayName,
+            group,
+            description,
+            role,
+            isActive
+        };
+        openChannelEditDialog(channelConfig);
     };
 
     return (
@@ -225,6 +257,7 @@ export const ChannelCard = ({
                                 searchText={searchText}
                                 onCopy={handleCopyChannelName}
                                 onOpenStreamKey={() => setStreamKeyDialogOpen(true)}
+                                onEdit={handleEdit}
                             />
                         }
                         description={
