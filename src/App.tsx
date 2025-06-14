@@ -3,6 +3,7 @@ import { CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import { getAppTheme } from './theme';
 import { ChannelProvider } from './contexts/ChannelContext';
+import { ChannelFilterProvider } from './contexts/ChannelFilterContext';
 import { useTheme } from './contexts/ThemeContext';
 import { MainLayout } from './components/MainLayout';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -22,7 +23,9 @@ const App = () => {
             <ChannelProvider 
                 pollingIntervalSeconds={config.preferences.pollInterval}
             >
-                <MainLayout activeTab={activeTab} setActiveTab={setActiveTab} />
+                <ChannelFilterProvider>
+                    <MainLayout activeTab={activeTab} setActiveTab={setActiveTab} />
+                </ChannelFilterProvider>
             </ChannelProvider>
         </ThemeProvider>
     );

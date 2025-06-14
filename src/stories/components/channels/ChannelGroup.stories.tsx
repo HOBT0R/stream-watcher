@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ThemeProvider } from '../../../contexts/ThemeContext';
 import { ChannelGroup } from '../../../components/MainLayout/components/ChannelDashboard/components/ChannelGroup';
 import { ChannelProvider } from '../../../contexts/ChannelContext';
+import { ChannelFilterProvider } from '../../../contexts/ChannelFilterContext';
 import { ChannelEditProvider } from '../../../contexts/ChannelEditContext';
 
 const meta = {
@@ -18,13 +19,12 @@ const meta = {
   decorators: [
     (Story) => (
       <ThemeProvider>
-        <ChannelProvider pollingIntervalSeconds={30}>
-          <ChannelEditProvider
-            onAddChannel={(channel) => console.log('Add channel:', channel)}
-            onUpdateChannel={(channelName, updates) => console.log('Update channel:', channelName, updates)}
-          >
-            <Story />
-          </ChannelEditProvider>
+        <ChannelProvider>
+          <ChannelFilterProvider>
+            <ChannelEditProvider>
+                <Story />
+            </ChannelEditProvider>
+          </ChannelFilterProvider>
         </ChannelProvider>
       </ThemeProvider>
     )
@@ -32,26 +32,6 @@ const meta = {
   args: {
     groupName: 'Speedrun',
     defaultExpanded: true,
-    channels: [
-      {
-        channelName: 'runner1',
-        displayName: 'Speed Runner 1',
-        status: 'online',
-        lastUpdated: new Date().toISOString(),
-        role: 'runner',
-        group: 'Speedrun',
-        isActive: true
-      },
-      {
-        channelName: 'commentator1',
-        displayName: 'Commentator 1',
-        status: 'offline',
-        lastUpdated: new Date().toISOString(),
-        role: 'commentator',
-        group: 'Speedrun',
-        isActive: true
-      }
-    ]
   }
 } satisfies Meta<typeof ChannelGroup>;
 
@@ -68,9 +48,8 @@ export const Collapsed: Story = {
   }
 };
 
-// With search highlight
+// To test search highlighting, you would need to set the value in the ChannelFilterProvider.
+// This story is a placeholder for a more advanced setup.
 export const WithSearch: Story = {
-  args: {
-    searchText: 'runner'
-  }
+    args: {}
 }; 

@@ -45,6 +45,8 @@ This application is built with a modern React architecture, emphasizing separati
 - **Contexts**:
     - **`ThemeContext`**: Provides theme-related state (`isDarkMode`) and functions (`toggleTheme`) to the entire application. It also detects the user's system preference for dark mode.
     - **`ChannelContext`**: A comprehensive context that manages all channel-related state. It integrates `useChannelManagement` and `useChannelStatus` to provide a single source of truth for channel data, statuses, and management functions.
+    - **`ChannelEditContext`**: Manages the state of the channel editing dialog, such as which channel is being edited and whether the dialog is open.
+    - **`ChannelFilterContext`**: Manages the global filter state for the channel dashboard, including search text and role filters.
 
 ### Project Structure
 ```
@@ -79,11 +81,12 @@ stream-watcher/
 
 ### Component Breakdown
 
--   **`App.tsx`**: The root component, responsible for setting up the main theme and `ChannelProvider`.
+-   **`App.tsx`**: The root component, responsible for setting up all the context providers (`ThemeProvider`, `ChannelProvider`, `ChannelEditProvider`, `ChannelFilterProvider`).
 -   **`MainLayout.tsx`**: The primary layout component that organizes the `TopBar` and the main content area, switching between the `ChannelDashboard` and `ChannelConfiguration` views based on the active tab.
 -   **`TopBar.tsx`**: The application's header, containing navigation buttons and the `ThemeToggle` component.
--   **`ChannelDashboard`**: The main view for displaying channel statuses. It uses the `useChannels` hook to get the latest channel states and provides filtering options.
--   **`ChannelConfiguration`**: The view for managing channels. It uses the `useChannelManager` hook to interact with the channel list (add, update, delete, etc.).
+-   **`ChannelDashboard`**: The main view for displaying channel statuses. It acts as a controller for filtering, updating the `ChannelFilterContext`, and renders the channel groups.
+-   **`ChannelConfiguration`**: The view for managing channels. It uses the `useChannels` and `useChannelEdit` hooks to interact with the channel list and open the edit dialog.
+-   **`ChannelGroup`**: A component that renders a group of channels. It consumes both `ChannelContext` and `ChannelFilterContext` to display only the channels that match the current filter settings.
 -   **`ThemeToggle`**: A simple switch component for toggling between light and dark modes.
 
 ## Available Scripts

@@ -5,18 +5,11 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { ChannelConfig } from '../../../../types/schema';
 import { useChannelEdit } from '../../../../contexts/ChannelEditContext';
+import { useChannels } from '../../../../contexts/ChannelContext';
 
-export interface ChannelConfigurationProps {
-    channels: ChannelConfig[];
-    onDeleteChannel: (channelName: string) => void;
-}
-
-export const ChannelConfiguration = ({ 
-    channels, 
-    onDeleteChannel 
-}: ChannelConfigurationProps) => {
+export const ChannelConfiguration = () => {
+    const { channels, deleteChannel } = useChannels();
     const { openChannelEditDialog } = useChannelEdit();
 
     return (
@@ -52,7 +45,7 @@ export const ChannelConfiguration = ({
                                     <IconButton aria-label="edit" onClick={() => openChannelEditDialog(channel)}>
                                         <EditIcon />
                                     </IconButton>
-                                    <IconButton aria-label="delete" onClick={() => onDeleteChannel(channel.channelName)}>
+                                    <IconButton aria-label="delete" onClick={() => deleteChannel(channel.channelName)}>
                                         <DeleteIcon />
                                     </IconButton>
                                 </TableCell>

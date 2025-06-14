@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { ChannelConfig } from '../types/schema';
 import { ChannelEditDialog } from '../components/MainLayout/components/ChannelConfiguration/ChannelEditDialog';
+import { useChannels } from './ChannelContext';
 
 interface ChannelEditContextType {
     openChannelEditDialog: (channel: ChannelConfig | null) => void;
@@ -18,32 +19,31 @@ export const useChannelEdit = () => {
 
 interface ChannelEditProviderProps {
     children: ReactNode;
-    onAddChannel: (channel: ChannelConfig) => void;
-    onUpdateChannel: (channelName: string, updates: Partial<ChannelConfig>) => void;
 }
 
-export const ChannelEditProvider = ({ children, onAddChannel, onUpdateChannel }: ChannelEditProviderProps) => {
+export const ChannelEditProvider = ({ children }: ChannelEditProviderProps) => {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingChannel, setEditingChannel] = useState<ChannelConfig | null>(null);
+    const { addChannel, updateChannel } = useChannels();
 
-    const openChannelEditDialog = (channel: ChannelConfig | null) => {
+    const openChannelEditDialog = useCallback((channel: ChannelConfig | null) => {
         setEditingChannel(channel);
         setDialogOpen(true);
-    };
+    }, []);
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         setDialogOpen(false);
         setEditingChannel(null);
-    };
+    }, []);
 
-    const handleSave = (channelData: ChannelConfig) => {
+    const handleSave = useCallback((channelData: ChannelConfig) => {
         if (editingChannel) {
-            onUpdateChannel(editingChannel.channelName, channelData);
+            updateChannel(editingChannel.channelName, channelData);
         } else {
-            onAddChannel(channelData);
+            addChannel(channelData);
         }
         handleClose();
-    };
+    }, [editingChannel, addChannel, updateChannel, handleClose]);
 
     return (
         <ChannelEditContext.Provider value={{ openChannelEditDialog }}>

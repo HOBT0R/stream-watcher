@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ThemeProvider } from '../../../contexts/ThemeContext';
 import { ChannelConfiguration } from '../../../components/MainLayout/components/ChannelConfiguration';
 import { ChannelEditProvider } from '../../../contexts/ChannelEditContext';
+import { ChannelProvider } from '../../../contexts/ChannelContext';
 
 const meta = {
   title: 'Components/Channels/ChannelConfiguration',
@@ -18,34 +19,15 @@ const meta = {
   decorators: [
     (Story) => (
       <ThemeProvider>
-        <ChannelEditProvider
-          onAddChannel={(channel) => console.log('Add channel:', channel)}
-          onUpdateChannel={(channelName, updates) => console.log('Update channel:', channelName, updates)}
-        >
-          <Story />
-        </ChannelEditProvider>
+        <ChannelProvider>
+          <ChannelEditProvider>
+            <Story />
+          </ChannelEditProvider>
+        </ChannelProvider>
       </ThemeProvider>
     )
   ],
-  args: {
-    channels: [
-      {
-        channelName: 'example_runner',
-        displayName: 'Example Runner',
-        group: 'Speedrun',
-        role: 'runner',
-        isActive: true
-      },
-      {
-        channelName: 'example_commentator',
-        displayName: 'Example Commentator',
-        group: 'Speedrun',
-        role: 'commentator',
-        isActive: true
-      }
-    ],
-    onDeleteChannel: (channelName) => console.log('Delete channel:', channelName)
-  }
+  args: {}
 } satisfies Meta<typeof ChannelConfiguration>;
 
 export default meta;

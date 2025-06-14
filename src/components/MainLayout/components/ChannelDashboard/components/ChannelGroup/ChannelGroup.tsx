@@ -12,36 +12,40 @@ import {
     ExpandMore as ExpandMoreIcon,
     ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
-import type { ChannelState } from '../../../../../../types/schema';
 import { ChannelList } from './components/ChannelList';
 import { useChannels } from '../../../../../../contexts/ChannelContext';
+import { useChannelFilter } from '../../../../../../contexts/ChannelFilterContext';
+import { applyFilters } from '../../../../../../utils/channelUtils';
 
 export interface ChannelGroupProps {
     groupName: string;
-    channels: ChannelState[];
     defaultExpanded?: boolean;
-    searchText?: string;
 }
 
 export const ChannelGroup = ({
     groupName,
-    channels,
     defaultExpanded = true,
-    searchText
 }: ChannelGroupProps) => {
     const [isExpanded, setIsExpanded] = useState(defaultExpanded);
     const { channelStates } = useChannels();
+    const { globalView, roleFilter, searchText } = useChannelFilter();
 
-    // Get status stats for this group
+    const filteredChannels = useMemo(() => {
+        const groupChannels = channelStates.filter(channel => channel.group === groupName);
+        return applyFilters(groupChannels, { globalView, roleFilter, searchText });
+    }, [channelStates, groupName, globalView, roleFilter, searchText]);
+
+    // Get status stats for this group based on the filtered list
     const stats = useMemo(() => {
-        const groupChannelStates = channelStates.filter(state => 
-            channels.some(c => c.channelName === state.channelName)
-        );
-        const total = groupChannelStates.length;
-        const online = groupChannelStates.filter(c => c.status === 'online').length;
-        const unknown = groupChannelStates.filter(c => c.status === 'unknown').length;
+        const total = filteredChannels.length;
+        const online = filteredChannels.filter(c => c.status === 'online').length;
+        const unknown = filteredChannels.filter(c => c.status === 'unknown').length;
         return { total, online, unknown };
-    }, [channels, channelStates]);
+    }, [filteredChannels]);
+
+    if (filteredChannels.length === 0) {
+        return null;
+    }
 
     return (
         <Paper 
@@ -92,8 +96,7 @@ export const ChannelGroup = ({
             <Collapse in={isExpanded}>
                 <Box sx={{ width: '100%', py: 2 }}>
                     <ChannelList 
-                        viewMode="grid"
-                        channels={channels}
+                        channels={filteredChannels}
                         searchText={searchText}
                     />
                 </Box>
