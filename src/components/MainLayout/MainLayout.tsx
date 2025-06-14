@@ -3,7 +3,7 @@ import { Box } from '@mui/material';
 import { TopBar } from './components/TopBar';
 import { ChannelDashboard } from './components/ChannelDashboard';
 import { ChannelConfiguration } from './components/ChannelConfiguration';
-import { useChannelManager } from '../../contexts/ChannelContext';
+import { useChannels } from '../../contexts/ChannelContext';
 import { ChannelEditProvider } from '../../contexts/ChannelEditContext';
 
 interface MainLayoutProps {
@@ -12,14 +12,7 @@ interface MainLayoutProps {
 }
 
 export const MainLayout = ({ activeTab, setActiveTab }: MainLayoutProps) => {
-  const { 
-    channels,
-    handleAddChannel,
-    handleUpdateChannel,
-    handleDeleteChannel,
-    handleImport,
-    handleExport,
-   } = useChannelManager();
+  const { importChannels, exportChannels } = useChannels();
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -30,18 +23,13 @@ export const MainLayout = ({ activeTab, setActiveTab }: MainLayoutProps) => {
       <TopBar 
         activeTab={activeTab} 
         onTabChange={handleTabChange} 
-        onImport={() => handleImport([])} 
-        onExport={handleExport} 
+        onImport={() => importChannels([])} 
+        onExport={exportChannels} 
       />
       <Box sx={{ p: 3, flexGrow: 1, overflowY: 'auto' }}>
-        <ChannelEditProvider onAddChannel={handleAddChannel} onUpdateChannel={handleUpdateChannel}>
+        <ChannelEditProvider>
           {activeTab === 0 && <ChannelDashboard />}
-          {activeTab === 1 && (
-            <ChannelConfiguration
-              channels={channels}
-              onDeleteChannel={handleDeleteChannel}
-            />
-          )}
+          {activeTab === 1 && <ChannelConfiguration />}
         </ChannelEditProvider>
       </Box>
     </Box>

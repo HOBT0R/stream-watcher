@@ -2,17 +2,16 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ChannelCard, ChannelCardProps } from './ChannelCard';
-import { ThemeProvider } from '../../../../../../../../contexts/ThemeContext';
 import { useChannelEdit } from '../../../../../../../../contexts/ChannelEditContext';
-import { ChannelConfig } from '../../../../../../../../types/schema';
+import { useChannels } from '../../../../../../../../contexts/ChannelContext';
+import { ChannelConfig, ChannelState } from '../../../../../../../../types/schema';
 
-vi.mock('../../../../../../../../contexts/ChannelEditContext', () => ({
-    useChannelEdit: vi.fn(),
-}));
+vi.mock('../../../../../../../../contexts/ChannelEditContext');
+vi.mock('../../../../../../../../contexts/ChannelContext');
 
 const mockOpenChannelEditDialog = vi.fn();
 
-const mockChannel: ChannelCardProps = {
+const mockChannel: ChannelState = {
   channelName: 'test-channel',
   displayName: 'Test Channel Name',
   status: 'online',
@@ -20,16 +19,11 @@ const mockChannel: ChannelCardProps = {
   lastUpdated: new Date().toISOString(),
   group: 'A',
   isActive: true,
-  onCopy: vi.fn(),
-  onOpenStreamKey: vi.fn(),
-  onEdit: vi.fn(),
 };
 
 const renderComponent = (props: Partial<ChannelCardProps> = {}) => {
   return render(
-    <ThemeProvider>
-      <ChannelCard {...mockChannel} {...props} />
-    </ThemeProvider>
+    <ChannelCard {...mockChannel} {...props} />
   );
 };
 
@@ -38,6 +32,28 @@ describe('ChannelCard', () => {
         vi.clearAllMocks();
         vi.mocked(useChannelEdit).mockReturnValue({
             openChannelEditDialog: mockOpenChannelEditDialog,
+        });
+
+        // This mock is necessary because ChannelCard uses a function from this context via props.
+        vi.mocked(useChannels).mockReturnValue({
+            updateChannel: vi.fn(),
+            // Provide any other functions or state needed by ChannelCard from this context
+            channelStates: [],
+            channels: [],
+            isLoading: false,
+            error: null,
+            refetchChannels: vi.fn(),
+            addChannel: vi.fn(),
+            deleteChannel: vi.fn(),
+            importChannels: vi.fn(),
+            exportChannels: vi.fn(),
+        });
+
+        // Mock clipboard API
+        Object.assign(navigator, {
+            clipboard: {
+                writeText: vi.fn().mockResolvedValue(undefined),
+            },
         });
     });
 
@@ -87,5 +103,13 @@ describe('ChannelCard', () => {
         };
         
         expect(mockOpenChannelEditDialog).toHaveBeenCalledWith(expectedChannelConfig);
+    });
+
+    it('copies channel name to clipboard when copy button is clicked', async () => {
+        renderComponent();
+        const copyButton = screen.getByRole('button', { name: /copy channel name/i });
+        await userEvent.click(copyButton);
+
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(mockChannel.channelName);
     });
 }); 

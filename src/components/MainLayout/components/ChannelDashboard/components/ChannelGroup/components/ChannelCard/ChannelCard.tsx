@@ -19,9 +19,6 @@ import { useChannelEdit } from '../../../../../../../../contexts/ChannelEditCont
 export interface ChannelCardProps extends ChannelState {
     searchText?: string;
     channelName: string;
-    onCopy: () => void;
-    onOpenStreamKey: () => void;
-    onEdit: () => void;
 }
 
 // ================ Layout component ================
@@ -80,7 +77,7 @@ const ChannelNameWithActions = ({
     searchText,
     onCopy,
     onOpenStreamKey,
-    onEdit
+    onEdit,
 }: {
     channelName: string;
     searchText?: string;
@@ -220,6 +217,10 @@ export const ChannelCard = ({
         setShowCopySnackbar(true);
     };
 
+    const handleOpenStreamKey = () => {
+        setStreamKeyDialogOpen(true);
+    };
+
     const handleEdit = () => {
         const channelConfig: ChannelConfig = {
             channelName,
@@ -256,7 +257,7 @@ export const ChannelCard = ({
                                 channelName={channelName}
                                 searchText={searchText}
                                 onCopy={handleCopyChannelName}
-                                onOpenStreamKey={() => setStreamKeyDialogOpen(true)}
+                                onOpenStreamKey={handleOpenStreamKey}
                                 onEdit={handleEdit}
                             />
                         }
@@ -298,7 +299,7 @@ export const ChannelCard = ({
                 open={showCopySnackbar}
                 autoHideDuration={2000}
                 onClose={() => setShowCopySnackbar(false)}
-                message="Channel name copied"
+                message="Channel name copied to clipboard"
             />
         </>
     );

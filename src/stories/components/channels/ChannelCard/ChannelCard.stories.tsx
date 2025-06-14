@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { ThemeProvider } from '../../../../contexts/ThemeContext';
 import { ChannelCard } from '../../../../components/MainLayout/components/ChannelDashboard/components/ChannelGroup/components/ChannelCard/ChannelCard';
 import { ChannelEditProvider } from '../../../../contexts/ChannelEditContext';
+import { ChannelProvider } from '../../../../contexts/ChannelContext';
 
 /**
  * `ChannelCard` displays stream status and provides quick actions for a Twitch channel.
@@ -61,14 +62,13 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <ThemeProvider>
-        <ChannelEditProvider
-          onAddChannel={(channel) => console.log('Add channel:', channel)}
-          onUpdateChannel={(channelName, updates) => console.log('Update channel:', channelName, updates)}
-        >
-          <Story />
-        </ChannelEditProvider>
-      </ThemeProvider>
+        <ThemeProvider>
+            <ChannelProvider>
+                <ChannelEditProvider>
+                    <Story />
+                </ChannelEditProvider>
+            </ChannelProvider>
+        </ThemeProvider>
     )
   ],
   args: {
@@ -79,9 +79,6 @@ const meta = {
     role: 'runner',
     group: 'speedrun',
     isActive: true,
-    onCopy: () => console.log('Copy clicked'),
-    onOpenStreamKey: () => console.log('Open stream key clicked'),
-    onEdit: () => console.log('Edit clicked')
   },
   argTypes: {
     channelName: {

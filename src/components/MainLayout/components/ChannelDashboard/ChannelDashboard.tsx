@@ -1,55 +1,24 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Box, ToggleButtonGroup, ToggleButton, Toolbar, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { ChannelGroup } from './components/ChannelGroup';
 import { useChannels } from '../../../../contexts/ChannelContext';
-import { ChannelView, ChannelRole, CHANNEL_VIEWS, CHANNEL_ROLES } from '../../../../constants/channel';
+import { useChannelFilter } from '../../../../contexts/ChannelFilterContext';
+import { CHANNEL_VIEWS, CHANNEL_ROLES } from '../../../../constants/channel';
+import { applyFilters } from '../../../../utils/channelUtils';
 
 export const ChannelDashboard = () => {
     const { channelStates } = useChannels();
+    const { 
+        globalView, setGlobalView, 
+        searchText, setSearchText, 
+        roleFilter, setRoleFilter 
+    } = useChannelFilter();
 
-    const [globalView, setGlobalView] = useState<ChannelView>('all');
-    const [searchText, setSearchText] = useState('');
-    const [roleFilter, setRoleFilter] = useState<ChannelRole>('all');
-
-    // Filter channels based on global view selection and search text
-    const filteredChannelsByView = useMemo(() => {
-        let filtered = channelStates;
-
-        // Apply global view filter
-        switch (globalView) {
-            case 'online':
-                filtered = filtered.filter(c => c.status === 'online');
-                break;
-            case 'offline':
-                filtered = filtered.filter(c => c.status === 'offline');
-                break;
-            case 'all':
-            default:
-                // No filter needed
-                break;
-        }
-
-        // Apply role filter
-        if (roleFilter !== 'all') {
-            filtered = filtered.filter(channel => channel.role === roleFilter);
-        }
-
-        // Apply search filter
-        if (searchText) {
-            const lowerCaseSearchText = searchText.toLowerCase();
-            filtered = filtered.filter(channel => 
-                channel.channelName.toLowerCase().includes(lowerCaseSearchText) ||
-                (channel.displayName && channel.displayName.toLowerCase().includes(lowerCaseSearchText)) ||
-                (channel.description && channel.description.toLowerCase().includes(lowerCaseSearchText)) ||
-                channel.group.toLowerCase().includes(lowerCaseSearchText)
-            );
-        }
-
-        return filtered;
-    }, [globalView, searchText, roleFilter, channelStates]);
-
-    // Get unique groups from the filtered channels
-    const groups = Array.from(new Set(filteredChannelsByView.map(c => c.group))).sort();
+    // Determine which groups to show based on the filters
+    const visibleGroups = useMemo(() => {
+        const filteredChannels = applyFilters(channelStates, { globalView, roleFilter, searchText });
+        return Array.from(new Set(filteredChannels.map(c => c.group))).sort();
+    }, [channelStates, globalView, roleFilter, searchText]);
 
     return (
         <Box>
@@ -77,7 +46,7 @@ export const ChannelDashboard = () => {
                         labelId="role-select-label"
                         value={roleFilter}
                         label="Role"
-                        onChange={(e) => setRoleFilter(e.target.value as ChannelRole)}
+                        onChange={(e) => setRoleFilter(e.target.value)}
                     >
                         {CHANNEL_ROLES.map(({ value, label }) => (
                             <MenuItem key={value} value={value}>
@@ -96,13 +65,11 @@ export const ChannelDashboard = () => {
                 />
             </Toolbar>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3 }}>
-                {groups.map(group => (
+                {visibleGroups.map(group => (
                     <ChannelGroup
                         key={group}
                         groupName={group}
-                        channels={filteredChannelsByView.filter(c => c.group === group)}
                         defaultExpanded
-                        searchText={searchText}
                     />
                 ))}
             </Box>

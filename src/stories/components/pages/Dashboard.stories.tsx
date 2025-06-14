@@ -3,6 +3,7 @@ import { ThemeProvider } from '../../../contexts/ThemeContext';
 import { ChannelDashboard } from '../../../components/MainLayout/components/ChannelDashboard';
 import { ChannelProvider } from '../../../contexts/ChannelContext';
 import { ChannelEditProvider } from '../../../contexts/ChannelEditContext';
+import { ChannelFilterProvider } from '../../../contexts/ChannelFilterContext';
 
 const meta = {
   title: 'Pages/Dashboard',
@@ -19,13 +20,12 @@ const meta = {
   decorators: [
     (Story) => (
       <ThemeProvider>
-        <ChannelProvider pollingIntervalSeconds={30}>
-          <ChannelEditProvider
-            onAddChannel={(channel) => console.log('Add channel:', channel)}
-            onUpdateChannel={(channelName, updates) => console.log('Update channel:', channelName, updates)}
-          >
-            <Story />
-          </ChannelEditProvider>
+        <ChannelProvider>
+          <ChannelFilterProvider>
+            <ChannelEditProvider>
+              <Story />
+            </ChannelEditProvider>
+          </ChannelFilterProvider>
         </ChannelProvider>
       </ThemeProvider>
     )
@@ -39,69 +39,19 @@ type Story = StoryObj<typeof meta>;
 export const Empty: Story = {};
 
 // With channels
-export const WithChannels: Story = {
-  parameters: {
-    channelContext: {
-      channels: [
-        {
-          channelName: 'example_runner',
-          displayName: 'Example Runner',
-          group: 'speedrun',
-          role: 'runner',
-          isActive: true,
-          status: 'online',
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          channelName: 'example_commentator',
-          displayName: 'Example Commentator',
-          group: 'speedrun',
-          role: 'commentator',
-          isActive: true,
-          status: 'offline',
-          lastUpdated: new Date().toISOString()
-        }
-      ]
-    }
-  }
-};
+export const WithChannels: Story = {};
 
 // Loading state
-export const Loading: Story = {
-  parameters: {
-    channelContext: {
-      isLoading: true
-    }
-  }
-};
+export const Loading: Story = {};
 
 // Error state
-export const ErrorState: Story = {
-  parameters: {
-    channelContext: {
-      error: new Error('Failed to fetch channel status')
-    }
-  }
-};
+export const ErrorState: Story = {};
 
 // Mobile view
 export const Mobile: Story = {
   parameters: {
     viewport: {
       defaultViewport: 'mobile1'
-    },
-    channelContext: {
-      channels: [
-        {
-          channelName: 'example_runner',
-          displayName: 'Example Runner',
-          group: 'speedrun',
-          role: 'runner',
-          isActive: true,
-          status: 'online',
-          lastUpdated: new Date().toISOString()
-        }
-      ]
     }
   }
 }; 
