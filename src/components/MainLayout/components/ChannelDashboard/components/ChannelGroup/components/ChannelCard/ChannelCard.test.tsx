@@ -1,7 +1,16 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ChannelCard, ChannelCardProps } from './ChannelCard';
 import { ThemeProvider } from '../../../../../../../../contexts/ThemeContext';
+import { useChannelEdit } from '../../../../../../../../contexts/ChannelEditContext';
+import { ChannelConfig } from '../../../../../../../../types/schema';
+
+vi.mock('../../../../../../../../contexts/ChannelEditContext', () => ({
+    useChannelEdit: vi.fn(),
+}));
+
+const mockOpenChannelEditDialog = vi.fn();
 
 const mockChannel: ChannelCardProps = {
   channelName: 'test-channel',
@@ -11,6 +20,9 @@ const mockChannel: ChannelCardProps = {
   lastUpdated: new Date().toISOString(),
   group: 'A',
   isActive: true,
+  onCopy: vi.fn(),
+  onOpenStreamKey: vi.fn(),
+  onEdit: vi.fn(),
 };
 
 const renderComponent = (props: Partial<ChannelCardProps> = {}) => {
@@ -22,6 +34,13 @@ const renderComponent = (props: Partial<ChannelCardProps> = {}) => {
 };
 
 describe('ChannelCard', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.mocked(useChannelEdit).mockReturnValue({
+            openChannelEditDialog: mockOpenChannelEditDialog,
+        });
+    });
+
   it('highlights searchText in channel displayName', () => {
     renderComponent({ searchText: 'Channel' });
     const displayNameElement = screen.getByText((_content, element) => {
@@ -51,5 +70,22 @@ describe('ChannelCard', () => {
         // Check that no span is rendered within the h6
         const highlightedPart = displayNameElement.querySelector('span');
         expect(highlightedPart).toBeNull();
+    });
+
+    it('calls openChannelEditDialog with channel data when edit button is clicked', async () => {
+        renderComponent();
+        const editButton = screen.getByRole('button', { name: /edit channel/i });
+        await userEvent.click(editButton);
+
+        const expectedChannelConfig: ChannelConfig = {
+            channelName: mockChannel.channelName,
+            displayName: mockChannel.displayName,
+            group: mockChannel.group,
+            description: mockChannel.description,
+            role: mockChannel.role,
+            isActive: mockChannel.isActive,
+        };
+        
+        expect(mockOpenChannelEditDialog).toHaveBeenCalledWith(expectedChannelConfig);
     });
 }); 

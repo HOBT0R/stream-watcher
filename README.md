@@ -193,6 +193,9 @@ Inspired by the cartoon-style slot machine.
 5. Open a Pull Request
 
 ## Future features
+- Support HTTPS
+- Add user roles (volunteers, staff)
+- Make the stream polling interval configurable
 - Embedded video: "expand down" cards to open a twitch embed
 - Add "edit" button to cards to allow quick changes to the details
 

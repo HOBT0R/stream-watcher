@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { ThemeProvider } from '../../../contexts/ThemeContext';
 import { ChannelConfiguration } from '../../../components/MainLayout/components/ChannelConfiguration';
+import { ChannelEditProvider } from '../../../contexts/ChannelEditContext';
 
 const meta = {
   title: 'Components/Channels/ChannelConfiguration',
@@ -17,7 +18,12 @@ const meta = {
   decorators: [
     (Story) => (
       <ThemeProvider>
-        <Story />
+        <ChannelEditProvider
+          onAddChannel={(channel) => console.log('Add channel:', channel)}
+          onUpdateChannel={(channelName, updates) => console.log('Update channel:', channelName, updates)}
+        >
+          <Story />
+        </ChannelEditProvider>
       </ThemeProvider>
     )
   ],
@@ -38,8 +44,6 @@ const meta = {
         isActive: true
       }
     ],
-    onAddChannel: (channel) => console.log('Add channel:', channel),
-    onUpdateChannel: (channelName, updates) => console.log('Update channel:', channelName, updates),
     onDeleteChannel: (channelName) => console.log('Delete channel:', channelName)
   }
 } satisfies Meta<typeof ChannelConfiguration>;
