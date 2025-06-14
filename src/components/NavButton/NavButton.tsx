@@ -14,7 +14,7 @@ export const NavButton: React.FC<NavButtonProps> = ({
 }) => {
   return (
     <Button
-      variant={isActive ? 'contained' : 'outlined'}
+      variant={isActive ? 'outlined' : 'contained'}
       onClick={onClick}
       sx={{
         backgroundColor: isActive ? 'primary.main' : 'action.disabled',

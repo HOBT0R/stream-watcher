@@ -2,8 +2,13 @@ import axios from 'axios';
 import type { InternalAxiosRequestConfig } from 'axios';
 import { API } from '../../constants/config';
 
-// BFF API endpoints
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+// Use explicit API base URL during development so the Vite dev server can
+// proxy or hit the BFF directly. For the built/released app (production),
+// use a relative URL so that requests go to the same origin/port where the
+// frontend is served, letting the preview server handle proxying.
+const API_BASE_URL = import.meta.env.DEV
+  ? (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000')
+  : '';
 
 // Create axios instance with default config
 export const apiClient = axios.create({

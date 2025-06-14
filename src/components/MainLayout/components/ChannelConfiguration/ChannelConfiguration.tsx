@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
     Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
-    FormControl, InputLabel, List, ListItem, ListItemText, MenuItem, Select,
+    FormControl, InputLabel, MenuItem, Select,
     Stack, Switch, TextField, Typography, IconButton, Paper, Table, TableBody,
     TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';

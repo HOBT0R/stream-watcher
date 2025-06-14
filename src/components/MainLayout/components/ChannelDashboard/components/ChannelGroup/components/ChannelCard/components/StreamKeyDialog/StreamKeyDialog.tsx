@@ -15,8 +15,8 @@ import {
     Link
 } from '@mui/material';
 import { ContentCopy as CopyIcon, Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon } from '@mui/icons-material';
-import { channelService } from '../../../../../../../../../services/api/channelService';
-import type { StreamKeyResponse } from '../../../../../../../../../services/api/channelService';
+import { channelService } from '../../../../../../../../../../services/api/channelService';
+import type { StreamKeyResponse } from '../../../../../../../../../../services/api/channelService';
 
 interface StreamKeyDialogProps {
     open: boolean;
@@ -134,12 +134,14 @@ export const StreamKeyDialog = ({ open, onClose, channelName }: StreamKeyDialogP
                                     endAdornment: (
                                         <InputAdornment position="end">
                                             <IconButton
+                                                aria-label="Toggle password visibility"
                                                 onClick={() => setShowKey(!showKey)}
                                                 edge="end"
                                             >
                                                 {showKey ? <VisibilityOffIcon /> : <VisibilityIcon />}
                                             </IconButton>
                                             <IconButton
+                                                aria-label="Copy stream key"
                                                 onClick={handleCopyKey}
                                                 edge="end"
                                             >
