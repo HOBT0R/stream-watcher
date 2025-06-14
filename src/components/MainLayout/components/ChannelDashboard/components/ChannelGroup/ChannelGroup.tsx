@@ -13,7 +13,7 @@ import {
     ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import type { ChannelState } from '../../../../../../types/schema';
-import { ChannelList } from '../ChannelList';
+import { ChannelList } from './components/ChannelList';
 import { useChannels } from '../../../../../../contexts/ChannelContext';
 
 export interface ChannelGroupProps {

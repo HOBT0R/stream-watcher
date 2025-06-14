@@ -49,28 +49,32 @@ This application is built with a modern React architecture, emphasizing separati
 ### Project Structure
 ```
 stream-watcher/
-├── src/
-│   ├── components/
-│   │   ├── ChannelConfiguration/
-│   │   ├── ChannelDashboard/
-│   │   ├── ChannelGroup/
-│   │   ├── MainLayout/
-│   │   ├── NavButton/
-│   │   ├── ThemeToggle/
-│   │   └── TopBar/
-│   ├── contexts/
-│   │   ├── ChannelContext.tsx
-│   │   └── ThemeContext.tsx
-│   ├── hooks/
-│   │   ├── useChannelManagement.ts
-│   │   ├── useChannelStatus.ts
-│   │   └── useLocalStorage.ts
-│   ├── services/
-│   │   └── api/
-│   ├── types/
-│   ├── utils/
-│   └── config/
-└── README.md
+|-- src/
+    |-- assets/
+    |-- components/
+    |   |-- MainLayout/
+    |   |   |-- components/
+    |   |   |   |-- ChannelConfiguration/
+    |   |   |   |-- ChannelDashboard/
+    |   |   |       |-- components/
+    |   |   |           |-- ChannelGroup/
+    |   |   |               |-- components/
+    |   |   |                   |-- ChannelCard/
+    |   |   |                   |   |-- components/
+    |   |   |                   |-- ChannelList/
+    |   |   |-- TopBar/
+    |   |       |-- components/
+    |   |           |-- ThemeToggle/
+    |   |-- NavButton/
+    |-- config/
+    |-- constants/
+    |-- contexts/
+    |-- hooks/
+    |-- services/
+    |   |-- api/
+    |-- types/
+    |-- utils/
+
 ```
 
 ### Component Breakdown
@@ -176,7 +180,7 @@ Inspired by the neon slot reel image.
 Inspired by the cartoon-style slot machine.
 *   Primary Color: Candy Apple Red — `#D32F2F`
     Dominates the design and gives a bold, inviting feel.
-*   Secondary Color: Golden Yellow — `#FFD700`
+*   Secondary Color: Burnt Orange — `#FF6F00`
     Provides contrast and enhances the game-show vibe.
 *   Accent Color: Lime Green — `#00C853`
     Adds freshness and helps signal interactivity.
@@ -187,6 +191,10 @@ Inspired by the cartoon-style slot machine.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## Future features
+- Embedded video: "expand down" cards to open a twitch embed
+- Add "edit" button to cards to allow quick changes to the details
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.

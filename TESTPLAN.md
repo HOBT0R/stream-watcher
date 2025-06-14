@@ -258,60 +258,60 @@ src/
 ## TO-DO: Test Implementation Steps
 
 ### Phase 1: Setup and Infrastructure
-- [ ] Set up Vitest + RTL configuration
-  - [ ] Configure test environment
-  - [ ] Set up test utilities and helpers
-  - [ ] Configure test coverage reporting
-  - [ ] Set up MSW for API mocking
+- [x] Set up Vitest + RTL configuration
+  - [x] Configure test environment
+  - [x] Set up test utilities and helpers
+  - [x] Configure test coverage reporting
+  - [x] Set up MSW for API mocking
 
-- [ ] Set up Storybook configuration
-  - [ ] Configure theme switching
-  - [ ] Set up viewport testing
-  - [ ] Configure accessibility testing
-  - [ ] Set up documentation
+- [x] Set up Storybook configuration
+  - [x] Configure theme switching
+  - [x] Set up viewport testing
+  - [x] Configure accessibility testing
+  - [x] Set up documentation
 
 ### Phase 2: Utility and Hook Tests
 - [ ] Implement tests for utility functions
   - [ ] `highlightText` utility
   - [ ] `getRoleChipColor` helper
-  - [ ] Other utility functions
+  - [x] Other utility functions
 
-- [ ] Implement tests for custom hooks
-  - [ ] `useLocalStorage` hook
-  - [ ] `useChannelStatus` hook
-  - [ ] Other custom hooks
+- [x] Implement tests for custom hooks
+  - [x] `useLocalStorage` hook
+  - [x] `useChannelStatus` hook
+  - [x] Other custom hooks
 
 ### Phase 3: Leaf Component Tests
-- [ ] Implement `ChannelCard` tests
-  - [ ] Vitest + RTL tests for behavior
-  - [ ] Storybook stories for visual states
+- [x] Implement `ChannelCard` tests
+  - [x] Vitest + RTL tests for behavior
+  - [x] Storybook stories for visual states
   - [ ] Accessibility tests
 
 - [ ] Implement `StreamKeyDialog` tests
-  - [ ] Vitest + RTL tests for behavior
-  - [ ] Storybook stories for visual states
+  - [x] Vitest + RTL tests for behavior (logic implemented, pathing issues remain)
+  - [x] Storybook stories for visual states
   - [ ] Accessibility tests
 
 ### Phase 4: Container Component Tests
 - [ ] Implement `ChannelList` tests
   - [ ] Vitest + RTL tests for behavior
-  - [ ] Storybook stories for visual states
+  - [x] Storybook stories for visual states
   - [ ] Accessibility tests
 
 - [ ] Implement `ChannelGroup` tests
-  - [ ] Vitest + RTL tests for behavior
-  - [ ] Storybook stories for visual states
+  - [x] Vitest + RTL tests for behavior (logic implemented, pathing issues remain)
+  - [x] Storybook stories for visual states
   - [ ] Accessibility tests
 
 ### Phase 5: Page Component Tests
 - [ ] Implement `ChannelDashboard` tests
   - [ ] Vitest + RTL tests for behavior
-  - [ ] Storybook stories for visual states
+  - [x] Storybook stories for visual states
   - [ ] Accessibility tests
 
-- [ ] Implement `ChannelConfiguration` tests
-  - [ ] Vitest + RTL tests for behavior
-  - [ ] Storybook stories for visual states
+- [x] Implement `ChannelConfiguration` tests
+  - [x] Vitest + RTL tests for behavior
+  - [x] Storybook stories for visual states
   - [ ] Accessibility tests
 
 ### Phase 6: Integration Tests

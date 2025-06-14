@@ -11,7 +11,7 @@ export interface ValidationError {
 }
 
 function isValidRole(role: string): role is ChannelRole {
-    return VALID_ROLES.includes(role as ChannelRole);
+    return (VALID_ROLES as readonly string[]).includes(role);
 }
 
 function validateAndTransformChannel(channel: any): ChannelConfig {

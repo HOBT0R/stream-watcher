@@ -1,62 +1,72 @@
-import { render, screen, fireEvent, within } from '@testing-library/react';
-import '@testing-library/jest-dom/vitest';
-import { vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
 import { ChannelConfiguration } from './ChannelConfiguration';
-import type { ChannelConfig } from '../../../../types/schema';
+import { ThemeProvider } from '../../../../contexts/ThemeContext';
+import { ChannelConfig } from '../../../../types/schema';
 
-const TEST_CHANNELS: ChannelConfig[] = [
-    { channelName: 'test1', group: 'group1', isActive: true, role: 'runner' },
-    { channelName: 'test2', group: 'group2', isActive: true, role: 'commentator' },
+const mockChannels: ChannelConfig[] = [
+  { channelName: 'test1', displayName: 'Test One', role: 'runner', group: 'A', isActive: true },
+  { channelName: 'test2', displayName: 'Test Two', role: 'commentator', group: 'B', isActive: false }
 ];
 
-const mockHandlers = {
-    onAddChannel: vi.fn(),
-    onUpdateChannel: vi.fn(),
-    onDeleteChannel: vi.fn(),
-};
-
 describe('ChannelConfiguration', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
+  const mockAdd = vi.fn();
+  const mockUpdate = vi.fn();
+  const mockDelete = vi.fn();
 
-    it('renders without crashing', () => {
-        render(
-            <ChannelConfiguration 
-                channels={TEST_CHANNELS}
-                {...mockHandlers}
-            />
-        );
-        expect(screen.getByText('Channel Configuration')).toBeInTheDocument();
-        expect(screen.getAllByText('test1').length).toBeGreaterThan(0);
-        expect(screen.getAllByText('test2').length).toBeGreaterThan(0);
-    });
+  const renderComponent = (channels = mockChannels) => {
+    render(
+      <ThemeProvider>
+        <ChannelConfiguration
+          channels={channels}
+          onAddChannel={mockAdd}
+          onUpdateChannel={mockUpdate}
+          onDeleteChannel={mockDelete}
+        />
+      </ThemeProvider>
+    );
+  };
 
-    it('opens the add dialog on "Add Channel" click', () => {
-        render(<ChannelConfiguration channels={TEST_CHANNELS} {...mockHandlers} />);
-        fireEvent.click(screen.getByText('Add Channel'));
-        const dialog = screen.getByRole('dialog');
-        expect(within(dialog).getByText('Add Channel')).toBeInTheDocument();
-    });
+  it('renders a table with channel data', () => {
+    renderComponent();
+    expect(screen.getByText('Test One')).toBeInTheDocument();
+    expect(screen.getByText('Test Two')).toBeInTheDocument();
+    expect(screen.getByText('runner')).toBeInTheDocument();
+    expect(screen.getByText('commentator')).toBeInTheDocument();
+  });
 
-    it('calls handleExport on "Export" button click', () => {
-        render(<ChannelConfiguration channels={TEST_CHANNELS} {...mockHandlers} />);
-        // component removed export button maybe; We'll test deletion action instead
-    });
+  it('opens an empty dialog when "Add Channel" is clicked', async () => {
+    renderComponent();
+    await userEvent.click(screen.getByRole('button', { name: /add channel/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText('Channel Name')).toHaveValue('');
+  });
 
-    it('calls handleDeleteChannel when a channel is deleted', () => {
-        render(<ChannelConfiguration channels={TEST_CHANNELS} {...mockHandlers} />);
-        const deleteButtons = screen.getAllByLabelText('delete');
-        fireEvent.click(deleteButtons[0]);
-        expect(mockHandlers.onDeleteChannel).toHaveBeenCalledWith('test1');
-    });
+  it('opens a pre-filled dialog when an edit button is clicked', async () => {
+    renderComponent();
+    const editButtons = screen.getAllByRole('button', { name: /edit/i });
+    await userEvent.click(editButtons[0]);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText('Channel Name')).toHaveValue('test1');
+    expect(screen.getByLabelText('Display Name')).toHaveValue('Test One');
+  });
 
-    it('opens the edit dialog when an edit button is clicked', () => {
-        render(<ChannelConfiguration channels={TEST_CHANNELS} {...mockHandlers} />);
-        const editButtons = screen.getAllByLabelText('edit');
-        fireEvent.click(editButtons[0]);
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
-        expect(screen.getByText('Edit Channel')).toBeInTheDocument();
-        expect(screen.getByDisplayValue('test1')).toBeInTheDocument();
-    });
+  it('calls onDeleteChannel when a delete button is clicked', async () => {
+    renderComponent();
+    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+    await userEvent.click(deleteButtons[0]);
+    expect(mockDelete).toHaveBeenCalledWith('test1');
+  });
+
+  it('calls onAddChannel when saving a new channel', async () => {
+    renderComponent();
+    await userEvent.click(screen.getByRole('button', { name: /add channel/i }));
+    
+    await userEvent.type(screen.getByLabelText('Channel Name'), 'new_channel');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(mockAdd).toHaveBeenCalled();
+    expect(mockAdd.mock.calls[0][0].channelName).toBe('new_channel');
+  });
 }); 

@@ -3,8 +3,8 @@ import {
     Typography
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
-import { ChannelCard } from './ChannelList/components/ChannelCard';
-import type { ChannelState } from '../../../../../types/schema';
+import { ChannelCard } from '../ChannelCard/ChannelCard';
+import type { ChannelState } from '../../../../../../../../types/schema';
 
 export interface ChannelListProps {
     viewMode?: 'grid' | 'list';

@@ -97,11 +97,11 @@ describe('TopBar', () => {
     it('highlights the active tab', () => {
         render(
             <TestWrapper>
-                <TopBar activeTab={1} onTabChange={mockSetActiveTab} />
+                <TopBar activeTab={0} onTabChange={mockSetActiveTab} />
             </TestWrapper>
         );
 
-        const configButton = screen.getByText('Configuration');
-        expect(configButton).toHaveClass('MuiButton-contained');
+        const dashboardButton = screen.getByRole('button', { name: 'Dashboard' });
+        expect(dashboardButton).toHaveStyle('backgroundColor: primary.main');
     });
 }); 

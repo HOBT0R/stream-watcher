@@ -33,13 +33,7 @@ vi.mock('../utils/channelTransform', () => ({
     arrayToChannels: (channels: any) => channels
 }));
 
-// Now, import the module under test AFTER the mock is declared
-let useChannelManagement: any;
-beforeAll(async () => {
-  const mod = await import('./useChannelManagement');
-  useChannelManagement = mod.useChannelManagement;
-});
-
+// (Note): We import useChannelManagement lazily inside helper fn below; no need for a top-level variable.
 
 type UseChannelManagementReturn = {
     channels: ChannelConfig[];

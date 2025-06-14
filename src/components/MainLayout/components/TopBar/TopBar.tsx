@@ -2,6 +2,7 @@ import React from 'react';
 import { AppBar, Toolbar, Typography, Box } from '@mui/material';
 import ThemeToggle from './components/ThemeToggle';
 import { NavButton } from '../../../NavButton';
+import AppIcon from '../../../../assets/stream-watcher.png'; 
 
 export interface TopBarProps {
   activeTab: number;
@@ -10,10 +11,21 @@ export interface TopBarProps {
   onExport: () => void;
 }
 
-export const TopBar = ({ activeTab, onTabChange, onImport, onExport }: TopBarProps) => {
+export const TopBar = ({ activeTab, onTabChange }: TopBarProps) => {
   return (
     <AppBar position="static" color="primary" enableColorOnDark>
       <Toolbar>
+      <img
+        src={AppIcon}
+        alt="Stream Watcher"
+        style={{
+          width: '5vw',        // 5% of viewport width
+          maxWidth: 48,        // px, optional
+          minWidth: 24,        // px, optional
+          height: 'auto',
+          marginRight: 8
+        }}
+      />
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           Stream Watcher
         </Typography>
