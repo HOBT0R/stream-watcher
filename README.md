@@ -160,13 +160,13 @@ The Stream Watcher application allows you to manage your monitored channels dire
 *   **Import Channels:**
     1.  Navigate to the "Configuration" tab.
     2.  Click the "Import" button.
-    3.  Select a `.json` file from your computer that contains the full application configuration (channels and preferences). This file should adhere to the `AppConfig` schema, as detailed in the [Default Channels](#default-channels) section.
-    4.  The imported configuration will overwrite your current channel list and preferences.
+    3.  Select a `.json` file from your computer. The file should contain a single top-level key, `"channels"`, which holds an array of channel configuration objects.
+    4.  The imported channels will be added to your current channel list.
 
 *   **Export Channels:**
     1.  Navigate to the "Configuration" tab.
     2.  Click the "Export" button.
-    3.  A `.json` file named `stream-watcher-config.json` containing your current `AppConfig` (channel list and preferences) will be downloaded to your computer, structured as described in the [Default Channels](#default-channels) section.
+    3.  A `.json` file named `channels-<timestamp>.json` containing your current channel list will be downloaded to your computer.
 
 ## Brand Color Palette
 

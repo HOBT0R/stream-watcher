@@ -51,6 +51,27 @@ export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?
         }
     }, [channelNames, pollingIntervalSeconds]);
 
+    const refreshChannel = useCallback(async (channelName: string) => {
+        try {
+            const updatedChannel = await channelService.getChannelStatus(channelName);
+            setChannels(prevChannels => 
+                prevChannels.map(c => 
+                    c.channelName === channelName ? updatedChannel : c
+                )
+            );
+        } catch (err) {
+            console.error(`Error refreshing channel ${channelName}:`, err);
+            // Optionally, update the channel state to indicate an error
+            setChannels(prevChannels =>
+                prevChannels.map(c =>
+                    c.channelName === channelName 
+                        ? { ...c, status: 'unknown', lastUpdated: new Date().toISOString() } 
+                        : c
+                )
+            );
+        }
+    }, []);
+
     useEffect(() => {
         // Clean up any existing interval
         if (intervalIdRef.current) {
@@ -93,6 +114,7 @@ export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?
         channels,
         isLoading,
         error,
-        refetch: fetchChannelStatuses
+        refetch: fetchChannelStatuses,
+        refreshChannel,
     };
 } 

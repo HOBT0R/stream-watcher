@@ -7,18 +7,21 @@ import {
     Circle as CircleIcon, 
     Key as KeyIcon, 
     OpenInNew as OpenInNewIcon, 
-    ContentCopy as ContentCopyIcon 
+    ContentCopy as ContentCopyIcon,
+    Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import EditIcon from '@mui/icons-material/Edit';
 import type { ChannelState, ChannelConfig } from '../../../../../../../../types/schema';
 import { StreamKeyDialog } from './components/StreamKeyDialog/StreamKeyDialog';
 import { getTwitchChannelUrl } from '../../../../../../../../utils/twitch';
 import { useChannelEdit } from '../../../../../../../../contexts/ChannelEditContext';
+import { useChannels } from '../../../../../../../../contexts/ChannelContext';
 
 // ================ Types ================
 export interface ChannelCardProps extends ChannelState {
     searchText?: string;
     channelName: string;
+    group: string;
 }
 
 // ================ Layout component ================
@@ -30,6 +33,7 @@ const CardLayout = ({
     description,
     roleChip,
     timestamp,
+    refreshButton,
 }: {
     displayName?: React.ReactNode;
     status: React.ReactNode;
@@ -38,13 +42,14 @@ const CardLayout = ({
     description?: React.ReactNode;
     roleChip?: React.ReactNode;
     timestamp: React.ReactNode;
+    refreshButton?: React.ReactNode;
 }) => (
     <Grid container direction="column" rowSpacing={1}>
         {/* ── Row 1 ── */}
         <Grid>
             <Grid container alignItems="flex-start" justifyContent="space-between">
-                <Grid  size={{ xs: 10 }}>{displayName}</Grid>
-                <Grid  size={{ xs: 2 }}>{status} {openButton}</Grid>
+                <Grid><div data-testid="channel-card-display-name">{displayName}</div></Grid>
+                <Grid>{status} {openButton}</Grid>
             </Grid>
         </Grid>
 
@@ -63,7 +68,10 @@ const CardLayout = ({
                 {roleChip && <Grid>{roleChip}</Grid>}
 
                 {/* right-most: time stamp */}
-                <Grid sx={{ marginLeft: 'auto' }}>{timestamp}</Grid>
+                <Grid sx={{ marginLeft: 'auto' }}>
+                    {timestamp}
+                    {refreshButton}
+                </Grid>
             </Grid>
         </Grid>
     </Grid>
@@ -128,6 +136,14 @@ const EditButton = ({ onEdit }: { onEdit: () => void }) => (
     <Tooltip title="Edit Channel">
         <IconButton size="small" onClick={onEdit}>
             <EditIcon fontSize="small" />
+        </IconButton>
+    </Tooltip>
+);
+
+const RefreshButton = ({ onRefresh }: { onRefresh: () => void }) => (
+    <Tooltip title="Refresh Channel Status">
+        <IconButton size="small" onClick={onRefresh}>
+            <RefreshIcon fontSize="small" />
         </IconButton>
     </Tooltip>
 );
@@ -211,6 +227,7 @@ export const ChannelCard = ({
     const [streamKeyDialogOpen, setStreamKeyDialogOpen] = useState(false);
     const [showCopySnackbar, setShowCopySnackbar] = useState(false);
     const { openChannelEditDialog } = useChannelEdit();
+    const { refreshChannel } = useChannels();
 
     const handleCopyChannelName = async () => {
         await navigator.clipboard.writeText(channelName);
@@ -219,6 +236,10 @@ export const ChannelCard = ({
 
     const handleOpenStreamKey = () => {
         setStreamKeyDialogOpen(true);
+    };
+
+    const handleRefresh = () => {
+        refreshChannel(channelName);
     };
 
     const handleEdit = () => {
@@ -234,73 +255,38 @@ export const ChannelCard = ({
     };
 
     return (
-        <>
-            <Card sx={{ 
-                minWidth: 275, 
-                maxWidth: 600,
-                position: 'relative',
-                '&:hover': { boxShadow: 6 }
-            }}>
-                <CardContent>
-                    <CardLayout
-                        displayName={
-                            displayName && (
-                                <Typography variant="h6" sx={{ color: 'primary.main' }}>
-                                    {highlightText(displayName, searchText)}
-                                </Typography>
-                            )
-                        }
-                        status={<StatusIndicator status={status} />}
-                        openButton={<OpenButton twitchUrl={getTwitchChannelUrl(channelName)} />}
-                        channelName={
-                            <ChannelNameWithActions
-                                channelName={channelName}
-                                searchText={searchText}
-                                onCopy={handleCopyChannelName}
-                                onOpenStreamKey={handleOpenStreamKey}
-                                onEdit={handleEdit}
-                            />
-                        }
-                        description={
-                            description && (
-                                <Typography variant="body2" color="text.secondary">
-                                    {highlightText(description, searchText)}
-                                </Typography>
-                            )
-                        }
-                        roleChip={
-                            role && (
-                                <Chip
-                                    label={highlightText(
-                                        role.charAt(0).toUpperCase() + role.slice(1),
-                                        searchText
-                                    )}
-                                    size="small"
-                                    color={getRoleChipColor(role)}
-                                />
-                            )
-                        }
-                        timestamp={
-                            <Typography variant="caption" color="text.secondary">
-                                {new Date(lastUpdated).toLocaleTimeString()}
-                            </Typography>
-                        }
-                    />
-                </CardContent>
-            </Card>
-
-            <StreamKeyDialog
-                open={streamKeyDialogOpen}
-                onClose={() => setStreamKeyDialogOpen(false)}
-                channelName={channelName}
+        <Card>
+            <CardContent>
+                <CardLayout
+                    displayName={highlightText(displayName, searchText)}
+                    status={<StatusIndicator status={status} />}
+                    openButton={<OpenButton twitchUrl={getTwitchChannelUrl(channelName)} />}
+                    channelName={
+                        <ChannelNameWithActions
+                            channelName={channelName}
+                            searchText={searchText}
+                            onCopy={handleCopyChannelName}
+                            onOpenStreamKey={handleOpenStreamKey}
+                            onEdit={handleEdit}
+                        />
+                    }
+                    description={description && <Typography variant="caption">{description}</Typography>}
+                    roleChip={role && <Chip label={role} size="small" color={getRoleChipColor(role)} />}
+                    timestamp={<Typography variant="caption" color="text.secondary">{new Date(lastUpdated).toLocaleString()}</Typography>}
+                    refreshButton={<RefreshButton onRefresh={handleRefresh} />}
+                />
+            </CardContent>
+            <StreamKeyDialog 
+                open={streamKeyDialogOpen} 
+                onClose={() => setStreamKeyDialogOpen(false)} 
+                channelName={channelName} 
             />
-
             <Snackbar
                 open={showCopySnackbar}
                 autoHideDuration={2000}
                 onClose={() => setShowCopySnackbar(false)}
-                message="Channel name copied to clipboard"
+                message={`${channelName} copied to clipboard`}
             />
-        </>
+        </Card>
     );
 }; 

@@ -10,6 +10,7 @@ vi.mock('../../../../../../../../contexts/ChannelEditContext');
 vi.mock('../../../../../../../../contexts/ChannelContext');
 
 const mockOpenChannelEditDialog = vi.fn();
+const mockRefreshChannel = vi.fn();
 
 const mockChannel: ChannelState = {
   channelName: 'test-channel',
@@ -37,6 +38,7 @@ describe('ChannelCard', () => {
         // This mock is necessary because ChannelCard uses a function from this context via props.
         vi.mocked(useChannels).mockReturnValue({
             updateChannel: vi.fn(),
+            refreshChannel: mockRefreshChannel,
             // Provide any other functions or state needed by ChannelCard from this context
             channelStates: [],
             channels: [],
@@ -59,22 +61,17 @@ describe('ChannelCard', () => {
 
   it('highlights searchText in channel displayName', () => {
     renderComponent({ searchText: 'Channel' });
-    const displayNameElement = screen.getByText((_content, element) => {
-        return element?.tagName.toLowerCase() === 'h6' && element.textContent === 'Test Channel Name'
-    });
-    const highlightedPart = within(displayNameElement).getByText('Channel');
+    const displayNameContainer = screen.getByTestId('channel-card-display-name');
+    const highlightedPart = within(displayNameContainer).getByText('Channel');
     
     expect(highlightedPart).toBeInTheDocument();
     expect(highlightedPart.tagName).toBe('SPAN');
-    expect(highlightedPart.classList.contains('MuiTypography-root')).toBe(true);
   });
 
     it('is case-insensitive when highlighting', () => {
         renderComponent({ searchText: 'channel' }); // lowercase
-        const displayNameElement = screen.getByText((_content, element) => {
-            return element?.tagName.toLowerCase() === 'h6' && element.textContent === 'Test Channel Name'
-        });
-        const highlightedPart = within(displayNameElement).getByText('Channel'); // Original is capitalized
+        const displayNameContainer = screen.getByTestId('channel-card-display-name');
+        const highlightedPart = within(displayNameContainer).getByText('Channel'); // Original is capitalized
         
         expect(highlightedPart).toBeInTheDocument();
         expect(highlightedPart.tagName).toBe('SPAN');
@@ -82,9 +79,9 @@ describe('ChannelCard', () => {
 
     it('does not highlight when searchText does not match', () => {
         renderComponent({ searchText: 'nomatch' });
-        const displayNameElement = screen.getByText('Test Channel Name');
+        const displayNameContainer = screen.getByTestId('channel-card-display-name');
         // Check that no span is rendered within the h6
-        const highlightedPart = displayNameElement.querySelector('span');
+        const highlightedPart = displayNameContainer.querySelector('span');
         expect(highlightedPart).toBeNull();
     });
 
@@ -111,5 +108,13 @@ describe('ChannelCard', () => {
         await userEvent.click(copyButton);
 
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith(mockChannel.channelName);
+    });
+
+    it('calls refreshChannel with the channel name when refresh button is clicked', async () => {
+        renderComponent();
+        const refreshButton = screen.getByRole('button', { name: /refresh channel status/i });
+        await userEvent.click(refreshButton);
+
+        expect(mockRefreshChannel).toHaveBeenCalledWith(mockChannel.channelName);
     });
 }); 
