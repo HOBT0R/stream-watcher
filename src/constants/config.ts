@@ -18,4 +18,8 @@ export const CHANNEL_POLLING = {
 export const API = {
     /** Default timeout for API requests in milliseconds */
     DEFAULT_TIMEOUT_MS: 10000,
-} as const; 
+} as const;
+
+export const MIN_POLLING_INTERVAL = 30;
+export const MAX_POLLING_INTERVAL = 900;
+export const DEFAULT_POLLING_INTERVAL = 90; 

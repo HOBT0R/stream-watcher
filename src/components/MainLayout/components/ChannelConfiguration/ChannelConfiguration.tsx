@@ -10,6 +10,7 @@ import { useChannelEdit } from '../../../../contexts/ChannelEditContext';
 import { useChannels } from '../../../../contexts/ChannelContext';
 import { useState } from 'react';
 import { ChannelConfig } from '../../../../types/schema';
+import PollingIntervalConfiguration from './components/PollingIntervalConfiguration/PollingIntervalConfiguration';
 
 export const ChannelConfiguration = () => {
     const { channels, deleteChannel, importChannels, exportChannels } = useChannels();
@@ -85,6 +86,8 @@ export const ChannelConfiguration = () => {
                     </Button>
                 </Box>
             </Box>
+
+            <PollingIntervalConfiguration />
 
             <TableContainer component={Paper}>
                 <Table>

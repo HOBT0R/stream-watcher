@@ -45,6 +45,8 @@ describe('ChannelConfiguration', () => {
             refetchChannels: vi.fn(),
             addChannel: vi.fn(),
             updateChannel: vi.fn(),
+            pollingInterval: 90,
+            setPollingInterval: vi.fn(),
         });
     });
 
