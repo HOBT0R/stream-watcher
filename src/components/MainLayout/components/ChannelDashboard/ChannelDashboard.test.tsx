@@ -39,6 +39,8 @@ describe('ChannelDashboard', () => {
             importChannels: vi.fn(),
             exportChannels: vi.fn(),
             refreshChannel: vi.fn(),
+            pollingInterval: 90,
+            setPollingInterval: vi.fn(),
         });
         vi.mocked(useChannelFilter).mockReturnValue({
             globalView: 'all',

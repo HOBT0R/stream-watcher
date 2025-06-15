@@ -52,6 +52,8 @@ interface ChannelContextType {
     deleteChannel: (channelName: string) => void;
     importChannels: (channels: ChannelConfig[]) => void;
     exportChannels: () => void;
+    pollingInterval: number;
+    setPollingInterval: (interval: number) => void;
 }
 
 const ChannelContext = createContext<ChannelContextType | null>(null);
@@ -70,15 +72,14 @@ export const useChannels = () => {
 
 interface ChannelProviderProps {
     children: React.ReactNode;
-    pollingIntervalSeconds?: number;
 }
 
 export const ChannelProvider: React.FC<ChannelProviderProps> = ({ 
-    children, 
-    pollingIntervalSeconds 
+    children
 }) => {
     const [storedChannels, setStoredChannels] = useLocalStorage<ChannelConfig[]>('channels', transformedChannels);
     const [channels, dispatch] = useReducer(channelReducer, storedChannels);
+    const [pollingInterval, setPollingInterval] = useLocalStorage('pollingInterval', 90);
 
     useEffect(() => {
         setStoredChannels(channels);
@@ -93,7 +94,7 @@ export const ChannelProvider: React.FC<ChannelProviderProps> = ({
         error, 
         refetch,
         refreshChannel,
-    } = useChannelStatus(channelNames, pollingIntervalSeconds);
+    } = useChannelStatus(channelNames, pollingInterval);
 
     const mergedChannelStates = useMemo((): ChannelState[] => {
         return channelNames.map(name => {
@@ -150,9 +151,12 @@ export const ChannelProvider: React.FC<ChannelProviderProps> = ({
         deleteChannel,
         importChannels,
         exportChannels,
+        pollingInterval,
+        setPollingInterval,
     }), [
         mergedChannelStates, isLoading, error, refetch, refreshChannel, channels, 
-        addChannel, updateChannel, deleteChannel, importChannels, exportChannels
+        addChannel, updateChannel, deleteChannel, importChannels, exportChannels,
+        pollingInterval, setPollingInterval
     ]);
 
     return (

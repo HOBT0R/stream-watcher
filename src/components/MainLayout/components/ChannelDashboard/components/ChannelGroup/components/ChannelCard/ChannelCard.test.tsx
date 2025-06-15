@@ -49,6 +49,8 @@ describe('ChannelCard', () => {
             deleteChannel: vi.fn(),
             importChannels: vi.fn(),
             exportChannels: vi.fn(),
+            pollingInterval: 90,
+            setPollingInterval: vi.fn(),
         });
 
         // Mock clipboard API
