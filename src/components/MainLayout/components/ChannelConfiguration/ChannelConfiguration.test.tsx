@@ -12,6 +12,8 @@ vi.mock('../../../../contexts/ChannelContext');
 
 const mockOpenChannelEditDialog = vi.fn();
 const mockDeleteChannel = vi.fn();
+const mockImportChannels = vi.fn();
+const mockExportChannels = vi.fn();
 
 const mockChannels: ChannelConfig[] = [
   { channelName: 'test1', displayName: 'Test One', role: 'runner', group: 'A', isActive: true },
@@ -33,6 +35,9 @@ describe('ChannelConfiguration', () => {
         vi.mocked(useChannels).mockReturnValue({
             channels: mockChannels,
             deleteChannel: mockDeleteChannel,
+            importChannels: mockImportChannels,
+            exportChannels: mockExportChannels,
+            refreshChannel: vi.fn(),
             // Provide dummy implementations for other context values
             channelStates: [],
             isLoading: false,
@@ -40,8 +45,6 @@ describe('ChannelConfiguration', () => {
             refetchChannels: vi.fn(),
             addChannel: vi.fn(),
             updateChannel: vi.fn(),
-            importChannels: vi.fn(),
-            exportChannels: vi.fn(),
         });
     });
 
@@ -79,5 +82,27 @@ describe('ChannelConfiguration', () => {
         const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
         await userEvent.click(deleteButtons[0]);
         expect(mockDeleteChannel).toHaveBeenCalledWith('test1');
+    });
+
+    it('calls exportChannels when "Export" button is clicked', async () => {
+        renderComponent();
+        const exportButton = screen.getByRole('button', { name: /export/i });
+        await userEvent.click(exportButton);
+        expect(mockExportChannels).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls importChannels when a valid file is selected', async () => {
+        renderComponent();
+        const importData = {
+            channels: [
+                { channelName: 'new1', displayName: 'New One', role: 'runner', group: 'C', isActive: true }
+            ]
+        };
+        const file = new File([JSON.stringify(importData)], 'channels.json', { type: 'application/json' });
+        const importInput = screen.getByLabelText(/import/i);
+
+        await userEvent.upload(importInput, file);
+
+        expect(mockImportChannels).toHaveBeenCalledWith(importData.channels);
     });
 }); 

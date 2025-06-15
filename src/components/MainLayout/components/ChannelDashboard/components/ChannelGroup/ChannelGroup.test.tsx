@@ -35,6 +35,7 @@ const mockUseChannels = {
     deleteChannel: vi.fn(),
     importChannels: vi.fn(),
     exportChannels: vi.fn(),
+    refreshChannel: vi.fn(),
 };
 
 const mockUseChannelFilter: {

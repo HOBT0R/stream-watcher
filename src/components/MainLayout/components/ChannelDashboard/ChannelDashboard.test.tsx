@@ -38,6 +38,7 @@ describe('ChannelDashboard', () => {
             deleteChannel: vi.fn(),
             importChannels: vi.fn(),
             exportChannels: vi.fn(),
+            refreshChannel: vi.fn(),
         });
         vi.mocked(useChannelFilter).mockReturnValue({
             globalView: 'all',

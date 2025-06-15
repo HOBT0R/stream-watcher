@@ -2,15 +2,19 @@ import { apiClient } from './config';
 
 export interface Channel {
     channelName: string;
-    status?: 'online' | 'offline';
+    status?: 'online' | 'offline' | 'unknown';
+    lastUpdated: string;
 }
 
 export interface ChannelStatusRequest {
-    channels: Channel[];
+    channels: { channelName: string }[];
 }
 
 export interface ChannelStatusResponse {
-    channels: Channel[];
+    channels: {
+        channelName: string;
+        status?: 'online' | 'offline';
+    }[];
 }
 
 export interface StreamKeyResponse {
@@ -43,11 +47,29 @@ export const channelService = {
 
         try {
             const response = await apiClient.post<ChannelStatusResponse>('/api/v1/statuses', request);
-            return response.data.channels;
+            const now = new Date().toISOString();
+            const statusMap = new Map(response.data.channels.map(c => [c.channelName, c.status]));
+
+            return channelNames.map(name => ({
+                channelName: name,
+                status: statusMap.get(name) || 'unknown',
+                lastUpdated: now
+            }));
         } catch (error) {
             console.error('Failed to fetch channel statuses:', error);
             throw error;
         }
+    },
+
+    /**
+     * Get the status of a single Twitch channel
+     * @param channelName Name of the channel to check
+     * @returns Promise with the channel status
+     */
+    getChannelStatus: async (channelName: string): Promise<Channel> => {
+        // We can just use the plural version to keep the API surface smaller
+        const statuses = await channelService.getChannelStatuses([channelName]);
+        return statuses[0];
     },
 
     /**

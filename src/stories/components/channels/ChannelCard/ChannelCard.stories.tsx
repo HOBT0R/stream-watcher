@@ -1,4 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { ThemeProvider } from '../../../../contexts/ThemeContext';
 import { ChannelCard } from '../../../../components/MainLayout/components/ChannelDashboard/components/ChannelGroup/components/ChannelCard/ChannelCard';
 import { ChannelEditProvider } from '../../../../contexts/ChannelEditContext';
@@ -58,6 +61,15 @@ const meta = {
           }
         ]
       }
+    },
+    msw: {
+      handlers: [
+        http.post('/api/v1/statuses', () => {
+          return HttpResponse.json({
+            channels: [{ channelName: 'example_channel', status: 'online' }]
+          });
+        })
+      ]
     }
   },
   decorators: [
@@ -135,6 +147,39 @@ export const Default: Story = {
     group: 'speedrun',
     isActive: true
   }
+};
+
+let clickCount = 0;
+const statuses = ['offline', 'unknown', 'online'];
+
+export const WithRefresh: Story = {
+  args: {
+    ...Default.args,
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.post('/api/v1/statuses', () => {
+          const status = statuses[clickCount % statuses.length];
+          clickCount++;
+          return HttpResponse.json({
+            channels: [{ channelName: 'example_channel', status }]
+          });
+        })
+      ]
+    }
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const refreshButton = canvas.getByRole('button', { name: /Refresh Channel Status/i });
+    
+    // Click the button a few times to cycle through statuses
+    await userEvent.click(refreshButton);
+    await new Promise(resolve => setTimeout(resolve, 100)); // wait for state update
+    await userEvent.click(refreshButton);
+    await new Promise(resolve => setTimeout(resolve, 100)); // wait for state update
+    await userEvent.click(refreshButton);
+  },
 };
 
 // Online state

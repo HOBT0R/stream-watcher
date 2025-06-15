@@ -42,6 +42,7 @@ interface ChannelContextType {
     isLoading: boolean;
     error: Error | null;
     refetchChannels: () => void;
+    refreshChannel: (channelName: string) => void;
     channels: ChannelConfig[];
     addChannel: (channel: ChannelConfig) => void;
     updateChannel: (channelName: string, updates: Partial<ChannelConfig>) => void;
@@ -83,7 +84,13 @@ export const ChannelProvider: React.FC<ChannelProviderProps> = ({
     const activeChannels = useMemo(() => channels.filter(c => c.isActive), [channels]);
     const channelNames = useMemo(() => activeChannels.map(c => c.channelName), [activeChannels]);
 
-    const { channels: statusUpdates, isLoading, error, refetch } = useChannelStatus(channelNames, pollingIntervalSeconds);
+    const { 
+        channels: statusUpdates, 
+        isLoading, 
+        error, 
+        refetch,
+        refreshChannel,
+    } = useChannelStatus(channelNames, pollingIntervalSeconds);
 
     const mergedChannelStates = useMemo((): ChannelState[] => {
         return channelNames.map(name => {
@@ -96,7 +103,7 @@ export const ChannelProvider: React.FC<ChannelProviderProps> = ({
             return {
                 ...config,
                 status: (status?.status || 'unknown') as ChannelStatus,
-                lastUpdated: new Date().toISOString(),
+                lastUpdated: status?.lastUpdated || new Date(0).toISOString(),
             };
         }).filter((c): c is ChannelState => c !== null);
     }, [activeChannels, channelNames, statusUpdates]);
@@ -123,7 +130,7 @@ export const ChannelProvider: React.FC<ChannelProviderProps> = ({
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'channels.json';
+        a.download = `channels-${Date.now()}.json`;
         a.click();
         URL.revokeObjectURL(url);
     }, [channels]);
@@ -133,6 +140,7 @@ export const ChannelProvider: React.FC<ChannelProviderProps> = ({
         isLoading,
         error,
         refetchChannels: refetch,
+        refreshChannel,
         channels,
         addChannel,
         updateChannel,
@@ -140,7 +148,7 @@ export const ChannelProvider: React.FC<ChannelProviderProps> = ({
         importChannels,
         exportChannels,
     }), [
-        mergedChannelStates, isLoading, error, refetch, channels, 
+        mergedChannelStates, isLoading, error, refetch, refreshChannel, channels, 
         addChannel, updateChannel, deleteChannel, importChannels, exportChannels
     ]);
 
