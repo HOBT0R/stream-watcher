@@ -105,4 +105,19 @@ describe('ChannelConfiguration', () => {
 
         expect(mockImportChannels).toHaveBeenCalledWith(importData.channels);
     });
+
+    it('calls importChannels when a valid file with channels as an object is selected', async () => {
+        renderComponent();
+        const importData = {
+            channels: {
+                "new1": { channelName: 'new1', displayName: 'New One', role: 'runner', group: 'C', isActive: true }
+            }
+        };
+        const file = new File([JSON.stringify(importData)], 'channels.json', { type: 'application/json' });
+        const importInput = screen.getByLabelText(/import/i);
+
+        await userEvent.upload(importInput, file);
+
+        expect(mockImportChannels).toHaveBeenCalledWith(Object.values(importData.channels));
+    });
 }); 

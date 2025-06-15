@@ -159,6 +159,7 @@ This document outlines the specific test scenarios for each component and for sy
   - Form validation
   - **Import functionality:**
     - Successfully imports valid channel configuration JSON.
+    - Successfully imports valid channel configuration JSON where `channels` is an object.
     - Handles import of malformed or invalid JSON structure.
     - Handles import of empty JSON.
   - **Export functionality:**

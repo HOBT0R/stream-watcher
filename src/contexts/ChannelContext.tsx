@@ -2,6 +2,7 @@ import React, { createContext, useContext, useMemo, useReducer, useCallback, use
 import type { ChannelState, ChannelConfig, ChannelStatus } from '../types/schema';
 import { useChannelStatus } from '../hooks/useChannelStatus';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import defaults from '../config/defaults.json';
 
 // ====================================================================================
 // Reducer and Actions for Channel Configuration
@@ -32,6 +33,8 @@ const channelReducer = (state: ChannelConfig[], action: Action): ChannelConfig[]
             return state;
     }
 };
+
+const transformedChannels = Object.values(defaults.channels);
 
 // ====================================================================================
 // Context Definition
@@ -74,7 +77,7 @@ export const ChannelProvider: React.FC<ChannelProviderProps> = ({
     children, 
     pollingIntervalSeconds 
 }) => {
-    const [storedChannels, setStoredChannels] = useLocalStorage<ChannelConfig[]>('channels', []);
+    const [storedChannels, setStoredChannels] = useLocalStorage<ChannelConfig[]>('channels', transformedChannels);
     const [channels, dispatch] = useReducer(channelReducer, storedChannels);
 
     useEffect(() => {

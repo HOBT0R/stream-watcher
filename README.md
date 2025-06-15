@@ -104,12 +104,13 @@ The application comes with a set of default channels that are used when no confi
 ```json
 {
     "channels": {
-        "channelName": {
-            "channelName": "channelName",
-            "displayName": "Display Name",
-            "group": "Group Name",
-            "description": "Channel description",
-            "isActive": true
+        "ndzjdbyygfuljodpgarp0ehqw": {
+            "channelName": "ndzjdbyygfuljodpgarp0ehqw",
+            "displayName": "Speedromizer Dummy Channel 1",
+            "group": "A",
+            "description": "Runner A1",
+            "isActive": true,
+            "role": "runner"
         }
     },
     "preferences": {
@@ -160,7 +161,7 @@ The Stream Watcher application allows you to manage your monitored channels dire
 *   **Import Channels:**
     1.  Navigate to the "Configuration" tab.
     2.  Click the "Import" button.
-    3.  Select a `.json` file from your computer. The file should contain a single top-level key, `"channels"`, which holds an array of channel configuration objects.
+    3.  Select a `.json` file from your computer. The file should be an array of channel objects, or an object with a top-level key, `"channels"`, which holds an array or object of channel configuration objects.
     4.  The imported channels will be added to your current channel list.
 
 *   **Export Channels:**
