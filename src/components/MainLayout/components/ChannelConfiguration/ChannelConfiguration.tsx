@@ -27,13 +27,24 @@ export const ChannelConfiguration = () => {
                 const content = e.target?.result as string;
                 const importedData = JSON.parse(content);
                 
-                // Basic validation
-                if (!importedData.channels || !Array.isArray(importedData.channels)) {
-                    throw new Error('Invalid file format: "channels" array not found.');
+                let channelData: any;
+
+                if (importedData.channels) {
+                    if (Array.isArray(importedData.channels)) {
+                        channelData = importedData.channels;
+                    } else if (typeof importedData.channels === 'object' && importedData.channels !== null) {
+                        channelData = Object.values(importedData.channels);
+                    } else {
+                        throw new Error('Invalid file format: "channels" is not an array or object.');
+                    }
+                } else if (Array.isArray(importedData)) {
+                    channelData = importedData;
+                } else {
+                    throw new Error('Invalid file format: "channels" array or object not found.');
                 }
 
                 // More detailed validation could be added here (e.g., with Zod)
-                const validatedChannels = importedData.channels.filter(
+                const validatedChannels = channelData.filter(
                     (c: any): c is ChannelConfig => 
                         c && typeof c.channelName === 'string'
                 );
