@@ -3,6 +3,7 @@ import type { ChannelState, ChannelConfig, ChannelStatus } from '../types/schema
 import { useChannelStatus } from '../hooks/useChannelStatus';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import defaults from '../config/defaults.json';
+import { channelService } from '../services/api/channelService';
 
 // ====================================================================================
 // Reducer and Actions for Channel Configuration
@@ -40,7 +41,7 @@ const transformedChannels = Object.values(defaults.channels);
 // Context Definition
 // ====================================================================================
 
-interface ChannelContextType {
+export interface ChannelContextType {
     channelStates: ChannelState[];
     isLoading: boolean;
     error: Error | null;
@@ -72,14 +73,21 @@ export const useChannels = () => {
 
 interface ChannelProviderProps {
     children: React.ReactNode;
+    initialChannels?: ChannelConfig[];
+    pollingInterval?: number;
 }
 
 export const ChannelProvider: React.FC<ChannelProviderProps> = ({ 
-    children
+    children,
+    initialChannels,
+    pollingInterval: pollingIntervalProp
 }) => {
     const [storedChannels, setStoredChannels] = useLocalStorage<ChannelConfig[]>('channels', transformedChannels);
-    const [channels, dispatch] = useReducer(channelReducer, storedChannels);
-    const [pollingInterval, setPollingInterval] = useLocalStorage('pollingInterval', 90);
+    const [channels, dispatch] = useReducer(channelReducer, initialChannels || storedChannels);
+    const [storedPollingInterval, setStoredPollingInterval] = useLocalStorage('pollingInterval', 90);
+
+    const pollingInterval = pollingIntervalProp ?? storedPollingInterval;
+    const setPollingInterval = setStoredPollingInterval;
 
     useEffect(() => {
         setStoredChannels(channels);
@@ -93,24 +101,37 @@ export const ChannelProvider: React.FC<ChannelProviderProps> = ({
         isLoading, 
         error, 
         refetch,
-        refreshChannel,
+        setChannels: setStatusUpdates,
     } = useChannelStatus(channelNames, pollingInterval);
 
-    const mergedChannelStates = useMemo((): ChannelState[] => {
-        return channelNames.map(name => {
-            const config = activeChannels.find(c => c.channelName === name);
-            const status = statusUpdates.find(s => s.channelName === name);
-            if (!config) {
-                // This should not happen if logic is correct
-                return null;
-            }
-            return {
-                ...config,
-                status: (status?.status || 'unknown') as ChannelStatus,
-                lastUpdated: status?.lastUpdated || new Date(0).toISOString(),
-            };
-        }).filter((c): c is ChannelState => c !== null);
-    }, [activeChannels, channelNames, statusUpdates]);
+    const mergedChannelStates: ChannelState[] = channelNames.map(name => {
+        const config = activeChannels.find(c => c.channelName === name);
+        const status = statusUpdates.find(s => s.channelName === name);
+        if (!config) {
+            // This should not happen if logic is correct
+            return null;
+        }
+        return {
+            ...config,
+            status: (status?.status || 'unknown') as ChannelStatus,
+            lastUpdated: status?.lastUpdated || new Date(0).toISOString(),
+        };
+    }).filter((c): c is ChannelState => c !== null);
+
+    const refreshChannel = useCallback(async (channelName: string) => {
+        try {
+            const updatedChannel = await channelService.getChannelStatus(channelName);
+            setStatusUpdates(prev => {
+                const existing = prev.find(s => s.channelName === channelName);
+                if (existing) {
+                    return prev.map(s => s.channelName === channelName ? updatedChannel : s);
+                }
+                return [...prev, updatedChannel];
+            });
+        } catch (error) {
+            console.error(`Error refreshing channel ${channelName}:`, error);
+        }
+    }, [setStatusUpdates]);
 
     const addChannel = useCallback((channel: ChannelConfig) => {
         dispatch({ type: 'ADD_CHANNEL', payload: channel });
@@ -139,7 +160,7 @@ export const ChannelProvider: React.FC<ChannelProviderProps> = ({
         URL.revokeObjectURL(url);
     }, [channels]);
 
-    const value = useMemo<ChannelContextType>(() => ({
+    const value = useMemo(() => ({
         channelStates: mergedChannelStates,
         isLoading,
         error,
@@ -154,9 +175,19 @@ export const ChannelProvider: React.FC<ChannelProviderProps> = ({
         pollingInterval,
         setPollingInterval,
     }), [
-        mergedChannelStates, isLoading, error, refetch, refreshChannel, channels, 
-        addChannel, updateChannel, deleteChannel, importChannels, exportChannels,
-        pollingInterval, setPollingInterval
+        mergedChannelStates, 
+        isLoading, 
+        error, 
+        refetch, 
+        refreshChannel,
+        channels, 
+        addChannel, 
+        updateChannel, 
+        deleteChannel, 
+        importChannels, 
+        exportChannels, 
+        pollingInterval,
+        setPollingInterval
     ]);
 
     return (

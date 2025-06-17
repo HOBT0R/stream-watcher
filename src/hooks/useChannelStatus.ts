@@ -51,7 +51,7 @@ export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?
         }
     }, [channelNames, pollingIntervalSeconds]);
 
-    const refreshChannel = useCallback(async (channelName: string) => {
+    const refreshChannel = async (channelName: string) => {
         try {
             const updatedChannel = await channelService.getChannelStatus(channelName);
             setChannels(prevChannels => 
@@ -70,7 +70,7 @@ export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?
                 )
             );
         }
-    }, []);
+    };
 
     useEffect(() => {
         // Clean up any existing interval
@@ -116,5 +116,6 @@ export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?
         error,
         refetch: fetchChannelStatuses,
         refreshChannel,
+        setChannels,
     };
 } 

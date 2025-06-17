@@ -6,7 +6,7 @@ import { useMediaQuery } from '@mui/material';
  * @interface ThemeContextType
  * Defines the shape of the theme context.
  */
-interface ThemeContextType {
+export interface ThemeContextType {
     /** A boolean indicating if dark mode is currently active. */
     isDarkMode: boolean;
     /** A function to toggle the theme between light and dark mode. */

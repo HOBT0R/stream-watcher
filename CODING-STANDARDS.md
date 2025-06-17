@@ -8,6 +8,9 @@ This document outlines the coding standards and best practices to be followed in
 - **Separation of Concerns**: Keep business logic, state management, and view/UI rendering separate.
 - **DRY (Don't Repeat Yourself)**: Abstract and reuse code where possible, especially through utility functions and custom hooks.
 - **Clarity and Readability**: Write code that is easy to understand. Self-documenting code is preferred over excessive comments.
+- **Declarative over Imperative**: Prefer declarative programming styles (e.g., using `.map()`, `.filter()`, `.reduce()`) over imperative loops (`for`, `while`) for data and array transformations. This often leads to more readable and maintainable code.
+    - **Bad**: An imperative `for` loop that manually builds a new array.
+    - **Good**: Using `.split()` and `.map()` to transform a string into an array of React components, as seen in the `highlightText` function in `ChannelCard.tsx`.
 
 ---
 
@@ -116,6 +119,7 @@ To keep imports clean and readable, we use path aliases.
 - **Styling**: Use MUI's `sx` prop or `styled()` for component-specific styles. Avoid inline `style` attributes.
 - **Linting**: Adhere to the configured ESLint rules. Run the linter before committing code.
 - **Destructuring**: Destructure props and objects for better readability.
+- **UI Design**: prefer Grid over Box. Exception is for simple 1D elements.
 
 ---
 

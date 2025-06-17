@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
+import { ComponentType } from 'react';
+import { ThemeContextType } from './ThemeContext';
 
 // Top-level mock for useLocalStorage
 const mockUseLocalStorage = vi.fn();
@@ -23,8 +25,8 @@ function createMatchMedia(matches: boolean) {
 }
 
 describe('ThemeContext', () => {
-  let ThemeProvider: any;
-  let useTheme: any;
+  let ThemeProvider: ComponentType<{ children: React.ReactNode }>;
+  let useTheme: () => ThemeContextType;
 
   beforeAll(async () => {
     // Import after mocking

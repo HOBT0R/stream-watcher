@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ThemeProvider } from '../../../contexts/ThemeContext';
-import TopBar from '../../../components/MainLayout/components/TopBar/TopBar';
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import TopBar from '@/components/MainLayout/components/TopBar/TopBar';
 
 const meta = {
   title: 'Layout/TopBar',

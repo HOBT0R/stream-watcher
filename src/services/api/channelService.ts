@@ -1,4 +1,5 @@
 import { apiClient } from './config';
+import { isAxiosError } from 'axios';
 
 export interface Channel {
     channelName: string;
@@ -101,12 +102,12 @@ export const channelService = {
 
             // If we got here, we have a successful response with the stream key
             return { streamKey: response.data };
-        } catch (error: any) {
+        } catch (error) {
             // If we got a 302 response in the error, use its data as the auth URL
-            if (error?.response?.status === 302) {
+            if (isAxiosError(error) && error.response?.status === 302) {
                 throw {
                     message: 'Authentication required',
-                    authUrl: error.response.data
+                    authUrl: error.response.data as string,
                 } as AuthRequiredError;
             }
 

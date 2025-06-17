@@ -1,8 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { ThemeProvider } from '../../../contexts/ThemeContext';
-import { ChannelConfiguration } from '../../../components/MainLayout/components/ChannelConfiguration';
-import { ChannelEditProvider } from '../../../contexts/ChannelEditContext';
-import { ChannelProvider } from '../../../contexts/ChannelContext';
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { ChannelConfiguration } from '@/components/MainLayout/components/ChannelConfiguration';
+import { ChannelEditProvider } from '@/contexts/ChannelEditContext';
+import { ChannelProvider } from '@/contexts/ChannelContext';
 
 const meta = {
   title: 'Components/Channels/ChannelConfiguration',
