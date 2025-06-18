@@ -1,16 +1,26 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ChannelCard, ChannelCardProps } from './ChannelCard';
-import { useChannelEdit } from '../../../../../../../../contexts/ChannelEditContext';
-import { useChannels } from '../../../../../../../../contexts/ChannelContext';
-import { ChannelConfig, ChannelState } from '../../../../../../../../types/schema';
+import { ChannelCard, ChannelCardProps } from '@/components/MainLayout/components/ChannelDashboard/components/ChannelGroup/components/ChannelCard/ChannelCard';
+import { useChannelEdit } from '@/contexts/ChannelEditContext';
+import { useChannels } from '@/contexts/ChannelContext';
+import { useVideo } from '@/contexts/VideoContext';
+import { ChannelConfig, ChannelState } from '@/types/schema';
 
-vi.mock('../../../../../../../../contexts/ChannelEditContext');
-vi.mock('../../../../../../../../contexts/ChannelContext');
+vi.mock('@/contexts/ChannelEditContext');
+vi.mock('@/contexts/ChannelContext');
+vi.mock('@/contexts/VideoContext');
+vi.mock('@/hooks/useIntersectionObserver', () => ({
+    useIntersectionObserver: () => true,
+}));
+vi.mock('@/components/VideoPlayer', () => ({
+    default: vi.fn(() => <div data-testid="video-player-mock" />),
+}));
 
 const mockOpenChannelEditDialog = vi.fn();
 const mockRefreshChannel = vi.fn();
+const mockAddPlayingVideo = vi.fn();
+const mockRemovePlayingVideo = vi.fn();
 
 const mockChannel: ChannelState = {
   channelName: 'test-channel',
@@ -22,10 +32,16 @@ const mockChannel: ChannelState = {
   isActive: true,
 };
 
-const renderComponent = (props: Partial<ChannelCardProps> = {}) => {
-  return render(
-    <ChannelCard {...mockChannel} {...props} />
-  );
+const renderComponent = (props: Partial<ChannelCardProps> = {}, playingVideos: string[] = []) => {
+    vi.mocked(useVideo).mockReturnValue({
+        playingVideos,
+        addPlayingVideo: mockAddPlayingVideo,
+        removePlayingVideo: mockRemovePlayingVideo,
+    });
+
+    return render(
+        <ChannelCard {...mockChannel} {...props} />
+    );
 };
 
 describe('ChannelCard', () => {
@@ -118,5 +134,36 @@ describe('ChannelCard', () => {
         await userEvent.click(refreshButton);
 
         expect(mockRefreshChannel).toHaveBeenCalledWith(mockChannel.channelName);
+    });
+
+    describe('Video Player Functionality', () => {
+        it('should show play button and not the video player initially', () => {
+            renderComponent();
+            expect(screen.getByTestId('play-button')).toBeInTheDocument();
+            expect(screen.queryByTestId('video-player-mock')).not.toBeInTheDocument();
+        });
+
+        it('should disable play button if channel is offline', () => {
+            renderComponent({ status: 'offline' });
+            expect(screen.getByTestId('play-button')).toBeDisabled();
+        });
+
+        it('calls addPlayingVideo when play is clicked', async () => {
+            renderComponent();
+            await userEvent.click(screen.getByTestId('play-button'));
+            expect(mockAddPlayingVideo).toHaveBeenCalledWith(mockChannel.channelName);
+        });
+
+        it('renders the video player and stop button when playing', () => {
+            renderComponent({}, [mockChannel.channelName]);
+            expect(screen.getByTestId('video-player-mock')).toBeInTheDocument();
+            expect(screen.getByTestId('stop-button')).toBeInTheDocument();
+        });
+
+        it('calls removePlayingVideo when stop is clicked', async () => {
+            renderComponent({}, [mockChannel.channelName]);
+            await userEvent.click(screen.getByTestId('stop-button'));
+            expect(mockRemovePlayingVideo).toHaveBeenCalledWith(mockChannel.channelName);
+        });
     });
 }); 

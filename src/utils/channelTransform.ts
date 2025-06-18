@@ -14,41 +14,49 @@ function isValidRole(role: string): role is ChannelRole {
     return (VALID_ROLES as readonly string[]).includes(role);
 }
 
-function validateAndTransformChannel(channel: any): ChannelConfig {
-    if (!channel.channelName || !channel.group) {
+function validateAndTransformChannel(channel: unknown): ChannelConfig {
+    if (typeof channel !== 'object' || channel === null) {
+        throw new Error('Invalid channel: must be an object');
+    }
+
+    const c = channel as Record<string, unknown>;
+
+    if (!c.channelName || typeof c.channelName !== 'string' || !c.group || typeof c.group !== 'string') {
         throw new Error(`Invalid channel: missing required fields (channelName, group)`);
     }
 
     // Transform role if present
-    if (channel.role !== undefined) {
-        if (!isValidRole(channel.role)) {
-            throw new Error(`Invalid role "${channel.role}" for channel ${channel.channelName}. Must be one of: ${VALID_ROLES.join(', ')}`);
+    if (c.role !== undefined) {
+        if (typeof c.role !== 'string' || !isValidRole(c.role)) {
+            throw new Error(`Invalid role "${c.role}" for channel ${c.channelName}. Must be one of: ${VALID_ROLES.join(', ')}`);
         }
     }
 
     return {
-        channelName: channel.channelName,
-        displayName: channel.displayName,
-        group: channel.group,
-        description: channel.description,
-        role: channel.role as ChannelRole | undefined,
-        isActive: channel.isActive ?? true
+        channelName: c.channelName,
+        displayName: typeof c.displayName === 'string' ? c.displayName : undefined,
+        group: c.group,
+        description: typeof c.description === 'string' ? c.description : undefined,
+        role: c.role as ChannelRole | undefined,
+        isActive: typeof c.isActive === 'boolean' ? c.isActive : true
     };
 }
 
-export function transformImportedConfig(data: any): ChannelConfigData {
-    if (!data || typeof data !== 'object') {
+export function transformImportedConfig(data: unknown): ChannelConfigData {
+    if (typeof data !== 'object' || data === null) {
         throw new Error('Invalid configuration format: data must be an object');
     }
 
-    if (!data.channels || typeof data.channels !== 'object') {
+    const d = data as Record<string, unknown>;
+
+    if (!d.channels || typeof d.channels !== 'object' || d.channels === null) {
         throw new Error('Invalid configuration format: missing or invalid channels object');
     }
 
     const transformedChannels: Record<string, ChannelConfig> = {};
     
     // Transform each channel
-    Object.entries(data.channels).forEach(([key, channel]) => {
+    Object.entries(d.channels as Record<string, unknown>).forEach(([key, channel]) => {
         try {
             transformedChannels[key] = validateAndTransformChannel(channel);
         } catch (error) {

@@ -24,6 +24,10 @@ interface StreamKeyDialogProps {
     channelName: string;
 }
 
+interface AuthError {
+    authUrl: string;
+}
+
 export const StreamKeyDialog = ({ open, onClose, channelName }: StreamKeyDialogProps) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -39,12 +43,14 @@ export const StreamKeyDialog = ({ open, onClose, channelName }: StreamKeyDialogP
         try {
             const key = await channelService.getStreamKey(channelName);
             setStreamKey(key);
-        } catch (err: any) {
-            if ('authUrl' in err) {
-                setAuthUrl(err.authUrl);
+        } catch (err) {
+            if (typeof err === 'object' && err !== null && 'authUrl' in err) {
+                setAuthUrl((err as AuthError).authUrl);
                 setError('Authentication required');
+            } else if (err instanceof Error) {
+                setError(err.message || 'Failed to get stream key');
             } else {
-                setError(err?.message || 'Failed to get stream key');
+                setError('An unknown error occurred');
             }
         } finally {
             setLoading(false);

@@ -1,5 +1,14 @@
 import { createTheme, Theme, Palette } from '@mui/material/styles';
 
+declare module '@mui/material/styles' {
+    interface Palette {
+      highlight: Palette['primary'];
+    }
+    interface PaletteOptions {
+      highlight?: PaletteOptions['primary'];
+    }
+}
+
 /**
  * Theme mode preference
  */
@@ -20,6 +29,10 @@ export interface AppTheme extends Theme {
         success: {
             main: string;
         };
+        highlight: {
+            main: string;
+            contrastText: string;
+        };
     };
 }
 
@@ -37,6 +50,10 @@ export const getAppTheme = (prefersDarkMode: boolean): AppTheme => createTheme({
                 success: {
                     main: '#00FF66', // Neon Green (used for accent in the description)
                 },
+                highlight: {
+                    main: '#FFD700', // Neon Yellow
+                    contrastText: '#000000', // Black
+                },
                 // You may want to define other colors like background, text, etc. for dark mode
             }
             : { // Light mode palette
@@ -48,6 +65,10 @@ export const getAppTheme = (prefersDarkMode: boolean): AppTheme => createTheme({
                 },
                 success: {
                     main: '#00C853', // Lime Green (used for accent in the description)
+                },
+                highlight: {
+                    main: '#FF6F00', // Burnt Orange
+                    contrastText: '#FFFFFF', // White
                 },
                 // You may want to define other colors like background, text, etc. for light mode
             }),

@@ -8,7 +8,15 @@ A React-based frontend application for monitoring Twitch channel statuses. This 
 - Channel grouping and management through the UI
 - Import/Export of channel configurations
 - Filtering by online/offline status, role, and text search
+- Inline video player to watch live streams directly from the dashboard
 - Built with React, TypeScript, and Material-UI
+
+### Inline Video Player
+
+- Each channel card now includes a Play button (visible when the channel is live).
+- Clicking Play expands the card to reveal an embedded Twitch player (16:9 aspect ratio, min 400x300px).
+- You can play up to 4 streams at once; starting a fifth will require stopping another.
+- The video player is only loaded when the card is visible in the viewport, improving performance.
 
 ## Prerequisites
 - Node.js 18.x or higher
@@ -41,6 +49,8 @@ This application is built with a modern React architecture, emphasizing separati
     - **`useLocalStorage`**: A custom hook that persists state to the browser's local storage, used for channel configurations and theme preferences.
     - **`useChannelManagement`**: A hook that centralizes all logic for managing channels (add, update, delete, import, export).
     - **`useChannelStatus`**: A hook responsible for polling the backend to get the online/offline status of channels.
+    - **`useVideo`**: A hook and context that manages which channels are currently playing video, enforcing a concurrency limit and providing actions to start/stop playback.
+
 
 - **Contexts**:
     - **`ThemeContext`**: Provides theme-related state (`isDarkMode`) and functions (`toggleTheme`) to the entire application. It also detects the user's system preference for dark mode.
@@ -87,7 +97,11 @@ stream-watcher/
 -   **`ChannelDashboard`**: The main view for displaying channel statuses. It acts as a controller for filtering, updating the `ChannelFilterContext`, and renders the channel groups.
 -   **`ChannelConfiguration`**: The view for managing channels. It uses the `useChannels` and `useChannelEdit` hooks to interact with the channel list and open the edit dialog.
 -   **`ChannelGroup`**: A component that renders a group of channels. It consumes both `ChannelContext` and `ChannelFilterContext` to display only the channels that match the current filter settings.
+-   **`ChannelCard`**: A card that displays the status of a single channel. It includes actions to copy the channel name, get a stream key, open the channel on Twitch, and a play button to watch the live stream directly in the card. The video player is only mounted when the card is visible and actively playing.
 -   **`ThemeToggle`**: A simple switch component for toggling between light and dark modes.
+
+
+
 
 ## Available Scripts
 - `npm run dev` - Start development server
@@ -200,7 +214,6 @@ Inspired by the cartoon-style slot machine.
 - Support HTTPS
 - Add user roles (volunteers, staff)
 - Make the stream polling interval configurable
-- Embedded video: "expand down" cards to open a twitch embed
 - Add "edit" button to cards to allow quick changes to the details
 
 ## License

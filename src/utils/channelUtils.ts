@@ -28,4 +28,32 @@ export const applyFilters = (
     }
 
     return filtered;
+};
+
+export const getStatusColor = (status: ChannelState['status']) => {
+    switch (status) {
+        case 'online': return 'success.main';
+        case 'offline': return 'text.disabled';
+        case 'unknown':
+        default: return 'warning.main';
+    }
+};
+
+export const getStatusChipColor = (status: ChannelState['status']) => {
+    switch (status) {
+        case 'online': return 'success';
+        case 'offline': return 'primary';
+        case 'unknown':
+        default: return 'warning';
+    }
+};
+
+export const getRoleChipColor = (role?: ChannelState['role']) => {
+    switch (role) {
+        case 'runner': return 'success';
+        case 'commentator': return 'secondary';
+        case 'host': return 'primary';
+        case 'tech': return 'default';
+        default: return 'default';
+    }
 }; 

@@ -1,21 +1,28 @@
-import { useState } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { 
+    Box,
     Card, CardContent, Typography, Chip, IconButton, 
-    Tooltip, Link, Snackbar, Grid 
+    Tooltip, Link, Snackbar, Grid
 } from '@mui/material';
 import { 
-    Circle as CircleIcon, 
     Key as KeyIcon, 
     OpenInNew as OpenInNewIcon, 
     ContentCopy as ContentCopyIcon,
     Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import EditIcon from '@mui/icons-material/Edit';
-import type { ChannelState, ChannelConfig } from '../../../../../../../../types/schema';
+import type { ChannelState, ChannelConfig } from '@/types/schema';
 import { StreamKeyDialog } from './components/StreamKeyDialog/StreamKeyDialog';
-import { getTwitchChannelUrl } from '../../../../../../../../utils/twitch';
-import { useChannelEdit } from '../../../../../../../../contexts/ChannelEditContext';
-import { useChannels } from '../../../../../../../../contexts/ChannelContext';
+import { getTwitchChannelUrl } from '@/utils/twitch';
+import { useChannelEdit } from '@/contexts/ChannelEditContext';
+import { useChannels } from '@/contexts/ChannelContext';
+import { useVideo } from '@/contexts/VideoContext';
+import VideoPlayer from '@/components/VideoPlayer';
+import { PlayButton } from './components/PlayButton';
+import { StatusIndicator } from './components/StatusIndicator';
+import { getStatusChipColor } from '@/utils/channelUtils';
+import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
+import { highlightText } from '@/utils/textUtils';
 
 // ================ Types ================
 export interface ChannelCardProps extends ChannelState {
@@ -28,19 +35,27 @@ export interface ChannelCardProps extends ChannelState {
 const CardLayout = ({
     displayName,
     status,
+    playButton,
     openButton,
     channelName,
+    copyButton,
+    streamKeyButton,
+    editButton,
     description,
-    roleChip,
+    statusChip,
     timestamp,
     refreshButton,
 }: {
     displayName?: React.ReactNode;
     status: React.ReactNode;
+    playButton: React.ReactNode;
     openButton: React.ReactNode;
     channelName: React.ReactNode;
+    copyButton: React.ReactNode;
+    streamKeyButton: React.ReactNode;
+    editButton: React.ReactNode;
     description?: React.ReactNode;
-    roleChip?: React.ReactNode;
+    statusChip?: React.ReactNode;
     timestamp: React.ReactNode;
     refreshButton?: React.ReactNode;
 }) => (
@@ -54,7 +69,25 @@ const CardLayout = ({
         </Grid>
 
         {/* ── Row 2 ── */}
-        <Grid>{channelName}</Grid>
+        <Grid>
+            <Grid container alignItems="center" justifyContent="space-between" size={12}>
+                <Grid>
+                    {channelName}
+                </Grid>
+                <Grid>
+                    {copyButton}
+                </Grid>
+                <Grid>
+                    {streamKeyButton}
+                </Grid>
+                <Grid>
+                    {editButton}
+                </Grid>
+                <Grid>
+                    {playButton}
+                </Grid>
+            </Grid>
+        </Grid>
 
         {/* ── Row 3 ── */}
         <Grid>
@@ -63,10 +96,13 @@ const CardLayout = ({
                 {description && (
                     <Grid>{description}</Grid>
                 )}
-
-                {/* middle chip (role) */}
-                {roleChip && <Grid>{roleChip}</Grid>}
-
+            </Grid>
+        </Grid>
+        {/* ── Row 4 ── */}
+        <Grid>
+            <Grid container justifyContent="space-between" alignItems="center" columnGap={1}>
+                {/* left-most: STATUS chip */}
+                {<Grid>{statusChip}</Grid>}
                 {/* right-most: time stamp */}
                 <Grid sx={{ marginLeft: 'auto' }}>
                     {timestamp}
@@ -79,34 +115,6 @@ const CardLayout = ({
 
 
 // ================ Subcomponents ================
-
-const ChannelNameWithActions = ({
-    channelName,
-    searchText,
-    onCopy,
-    onOpenStreamKey,
-    onEdit,
-}: {
-    channelName: string;
-    searchText?: string;
-    onCopy: () => void;
-    onOpenStreamKey: () => void;
-    onEdit: () => void;
-}) => (
-    <>
-        <Typography 
-            variant="caption"
-            color="text.secondary"
-            onClick={onCopy}
-            sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
-        >
-            {highlightText(channelName, searchText)}
-        </Typography>
-        <CopyButton onCopy={onCopy} />
-        <StreamKeyButton onOpenStreamKey={onOpenStreamKey} />
-        <EditButton onEdit={onEdit} />
-    </>
-);
 
 const CopyButton = ({ onCopy }: { onCopy: () => void }) => (
     <Tooltip title="Copy Channel Name">
@@ -142,74 +150,11 @@ const EditButton = ({ onEdit }: { onEdit: () => void }) => (
 
 const RefreshButton = ({ onRefresh }: { onRefresh: () => void }) => (
     <Tooltip title="Refresh Channel Status">
-        <IconButton size="small" onClick={onRefresh}>
+        <IconButton data-testid="channel-card-refresh-button" size="small" onClick={onRefresh}>
             <RefreshIcon fontSize="small" />
         </IconButton>
     </Tooltip>
 );
-
-const StatusIndicator = ({ status }: { status: ChannelState['status'] }) => (
-    <CircleIcon sx={{ 
-        color: getStatusColor(status),
-        fontSize: '1rem'
-    }} />
-);
-
-
-// ================ Utility Functions ================
-const getStatusColor = (status: ChannelState['status']) => {
-    switch (status) {
-        case 'online': return 'success.main';
-        case 'offline': return 'text.disabled';
-        case 'unknown':
-        default: return 'warning.main';
-    }
-};
-
-const getRoleChipColor = (role?: ChannelState['role']) => {
-    switch (role) {
-        case 'runner': return 'success';
-        case 'commentator': return 'secondary';
-        case 'host': return 'primary';
-        case 'tech': return 'default';
-        default: return 'default';
-    }
-};
-
-const highlightText = (text: string | undefined, query: string | undefined) => {
-    if (!text || !query) return text;
-    const lowerCaseText = text.toLowerCase();
-    const lowerCaseQuery = query.toLowerCase();
-    const parts: (string | React.ReactNode)[] = [];
-    let lastIndex = 0;
-
-    for (let i = 0; i < lowerCaseText.length; i++) {
-        const matchIndex = lowerCaseText.indexOf(lowerCaseQuery, i);
-        if (matchIndex === -1) break;
-
-        if (matchIndex > lastIndex) {
-            parts.push(text.substring(lastIndex, matchIndex));
-        }
-        const endIndex = matchIndex + lowerCaseQuery.length;
-        parts.push(
-            <Typography 
-                component="span" 
-                key={matchIndex} 
-                sx={{ backgroundColor: 'secondary.main', color: 'black', fontWeight: 'bold' }}
-            >
-                {text.substring(matchIndex, endIndex)}
-            </Typography>
-        );
-        lastIndex = endIndex;
-        i = endIndex - 1;
-    }
-
-    if (lastIndex < text.length) {
-        parts.push(text.substring(lastIndex));
-    }
-
-    return <>{parts}</>;
-};
 
 
 // ================ Main Component ================
@@ -228,6 +173,25 @@ export const ChannelCard = ({
     const [showCopySnackbar, setShowCopySnackbar] = useState(false);
     const { openChannelEditDialog } = useChannelEdit();
     const { refreshChannel } = useChannels();
+    const { addPlayingVideo, removePlayingVideo, playingVideos } = useVideo();
+
+    const cardRef = useRef<HTMLDivElement>(null);
+    const observerOptions = useMemo(() => ({
+        rootMargin: '100px', // A little buffer
+    }), []);
+    const isIntersecting = useIntersectionObserver(cardRef, observerOptions);
+
+    const isPlayingVideo = playingVideos.includes(channelName);
+    const isLive = status === 'online';
+    const canPlay = isLive || isPlayingVideo;
+    
+    const handleTogglePlay = () => {
+        if (isPlayingVideo) {
+            removePlayingVideo(channelName);
+        } else if (isLive) {
+            addPlayingVideo(channelName);
+        }
+    };
 
     const handleCopyChannelName = async () => {
         await navigator.clipboard.writeText(channelName);
@@ -249,30 +213,57 @@ export const ChannelCard = ({
             group,
             description,
             role,
-            isActive
+            isActive,
         };
         openChannelEditDialog(channelConfig);
     };
 
+    const twitchUrl = getTwitchChannelUrl(channelName);
+
     return (
-        <Card>
+        <Card 
+            ref={cardRef}
+            sx={{ 
+                minWidth: isPlayingVideo ? 400 : 275,
+                transition: 'all 0.3s ease-in-out',
+            }}
+        >
             <CardContent>
+                {isPlayingVideo && isIntersecting && (
+                    <Box sx={{
+                        position: 'relative',
+                        width: '100%',
+                        aspectRatio: '16 / 9',
+                        minHeight: 300,
+                        backgroundColor: 'black'
+                    }}>
+                        <VideoPlayer
+                            channelName={channelName}
+                            displayName={displayName || channelName}
+                        />
+                    </Box>
+                )}
                 <CardLayout
                     displayName={highlightText(displayName, searchText)}
                     status={<StatusIndicator status={status} />}
-                    openButton={<OpenButton twitchUrl={getTwitchChannelUrl(channelName)} />}
+                    playButton={<PlayButton isPlaying={isPlayingVideo} onClick={handleTogglePlay} disabled={!canPlay} />}
+                    openButton={<OpenButton twitchUrl={twitchUrl} />}
                     channelName={
-                        <ChannelNameWithActions
-                            channelName={channelName}
-                            searchText={searchText}
-                            onCopy={handleCopyChannelName}
-                            onOpenStreamKey={handleOpenStreamKey}
-                            onEdit={handleEdit}
-                        />
+                        <Typography 
+                            variant="caption"
+                            color="text.secondary"
+                            onClick={handleCopyChannelName}
+                            sx={{ cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
+                        >
+                            {highlightText(channelName, searchText)}
+                        </Typography>
                     }
+                    copyButton={<CopyButton onCopy={handleCopyChannelName} />}
+                    streamKeyButton={<StreamKeyButton onOpenStreamKey={handleOpenStreamKey} />}
+                    editButton={<EditButton onEdit={handleEdit} />}
                     description={description && <Typography variant="caption">{description}</Typography>}
-                    roleChip={role && <Chip label={role} size="small" color={getRoleChipColor(role)} />}
-                    timestamp={<Typography variant="caption" color="text.secondary">{new Date(lastUpdated).toLocaleString()}</Typography>}
+                    statusChip={<Chip label={status} size='small' color={getStatusChipColor(status)} />}
+                    timestamp={<Typography variant="caption" color="text.secondary">{new Date(lastUpdated).toLocaleTimeString()}</Typography>}
                     refreshButton={<RefreshButton onRefresh={handleRefresh} />}
                 />
             </CardContent>

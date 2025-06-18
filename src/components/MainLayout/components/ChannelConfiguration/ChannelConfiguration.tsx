@@ -12,6 +12,19 @@ import { useState } from 'react';
 import { ChannelConfig } from '../../../../types/schema';
 import PollingIntervalConfiguration from './components/PollingIntervalConfiguration/PollingIntervalConfiguration';
 
+type ImportedData = {
+    channels?: unknown;
+};
+
+const isChannelConfig = (c: unknown): c is ChannelConfig => {
+    return (
+        typeof c === 'object' &&
+        c !== null &&
+        'channelName' in c &&
+        typeof (c as ChannelConfig).channelName === 'string'
+    );
+};
+
 export const ChannelConfiguration = () => {
     const { channels, deleteChannel, importChannels, exportChannels } = useChannels();
     const { openChannelEditDialog } = useChannelEdit();
@@ -26,9 +39,9 @@ export const ChannelConfiguration = () => {
             try {
                 setImportError(null);
                 const content = e.target?.result as string;
-                const importedData = JSON.parse(content);
+                const importedData = JSON.parse(content) as ImportedData;
                 
-                let channelData: any;
+                let channelData: unknown[];
 
                 if (importedData.channels) {
                     if (Array.isArray(importedData.channels)) {
@@ -45,10 +58,7 @@ export const ChannelConfiguration = () => {
                 }
 
                 // More detailed validation could be added here (e.g., with Zod)
-                const validatedChannels = channelData.filter(
-                    (c: any): c is ChannelConfig => 
-                        c && typeof c.channelName === 'string'
-                );
+                const validatedChannels = channelData.filter(isChannelConfig);
 
                 importChannels(validatedChannels);
             } catch (error) {

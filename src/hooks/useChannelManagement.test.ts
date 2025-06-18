@@ -30,7 +30,7 @@ vi.mock('../utils/channelTransform', () => ({
             channel2: TEST_CHANNELS.channel2
         }
     }),
-    arrayToChannels: (channels: any) => channels
+    arrayToChannels: (channels: ChannelConfig[]) => channels
 }));
 
 // (Note): We import useChannelManagement lazily inside helper fn below; no need for a top-level variable.
@@ -59,7 +59,7 @@ describe('useChannelManagement', () => {
         vi.clearAllMocks();
         currentChannels = [...MOCK_CHANNELS_ARRAY];
 
-        setChannels = vi.fn((callback: any) => {
+        setChannels = vi.fn((callback: (prev: ChannelConfig[]) => ChannelConfig[] | ChannelConfig[]) => {
             if (typeof callback === 'function') {
                 currentChannels = callback(currentChannels);
             } else {
