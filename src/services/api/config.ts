@@ -6,9 +6,7 @@ import { API } from '../../constants/config';
 // proxy or hit the BFF directly. For the built/released app (production),
 // use a relative URL so that requests go to the same origin/port where the
 // frontend is served, letting the preview server handle proxying.
-const API_BASE_URL = import.meta.env.DEV
-  ? (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000')
-  : '';
+const API_BASE_URL = '';
 
 // Create axios instance with default config
 export const apiClient = axios.create({
