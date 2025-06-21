@@ -9,9 +9,10 @@ import { ChannelEditProvider } from '../../contexts/ChannelEditContext';
 interface MainLayoutProps {
   activeTab: number;
   setActiveTab: (index: number) => void;
+  onLogout: () => void;
 }
 
-export const MainLayout = ({ activeTab, setActiveTab }: MainLayoutProps) => {
+export const MainLayout = ({ activeTab, setActiveTab, onLogout }: MainLayoutProps) => {
   const { importChannels, exportChannels } = useChannels();
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -25,6 +26,7 @@ export const MainLayout = ({ activeTab, setActiveTab }: MainLayoutProps) => {
         onTabChange={handleTabChange} 
         onImport={() => importChannels([])} 
         onExport={exportChannels} 
+        onLogout={onLogout} 
       />
       <Box sx={{ p: 3, flexGrow: 1, overflowY: 'auto' }}>
         <ChannelEditProvider>

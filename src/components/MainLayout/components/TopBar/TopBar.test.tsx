@@ -41,6 +41,7 @@ describe('TopBar', () => {
     const mockSetActiveTab = vi.fn();
     const mockOnImport = vi.fn();
     const mockOnExport = vi.fn();
+    const mockOnLogout = vi.fn();
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -51,7 +52,7 @@ describe('TopBar', () => {
     it('renders without crashing', () => {
         render(
             <TestWrapper>
-                <TopBar activeTab={0} onTabChange={mockSetActiveTab} onImport={mockOnImport} onExport={mockOnExport} />
+                <TopBar activeTab={0} onTabChange={mockSetActiveTab} onImport={mockOnImport} onExport={mockOnExport} onLogout={mockOnLogout} />
             </TestWrapper>
         );
     });
@@ -59,7 +60,7 @@ describe('TopBar', () => {
     it('displays the app name', () => {
         render(
             <TestWrapper>
-                <TopBar activeTab={0} onTabChange={mockSetActiveTab} onImport={mockOnImport} onExport={mockOnExport} />
+                <TopBar activeTab={0} onTabChange={mockSetActiveTab} onImport={mockOnImport} onExport={mockOnExport} onLogout={mockOnLogout} />
             </TestWrapper>
         );
         expect(screen.getByText('Stream Watcher')).toBeInTheDocument();
@@ -68,7 +69,7 @@ describe('TopBar', () => {
     it('renders navigation buttons', () => {
         render(
             <TestWrapper>
-                <TopBar activeTab={0} onTabChange={mockSetActiveTab} onImport={mockOnImport} onExport={mockOnExport} />
+                <TopBar activeTab={0} onTabChange={mockSetActiveTab} onImport={mockOnImport} onExport={mockOnExport} onLogout={mockOnLogout} />
             </TestWrapper>
         );
         expect(screen.getByText('Dashboard')).toBeInTheDocument();
@@ -78,7 +79,7 @@ describe('TopBar', () => {
     it('renders theme toggle', () => {
         render(
             <TestWrapper>
-                <TopBar activeTab={0} onTabChange={mockSetActiveTab} onImport={mockOnImport} onExport={mockOnExport} />
+                <TopBar activeTab={0} onTabChange={mockSetActiveTab} onImport={mockOnImport} onExport={mockOnExport} onLogout={mockOnLogout} />
             </TestWrapper>
         );
         expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
@@ -87,7 +88,7 @@ describe('TopBar', () => {
     it('calls setActiveTab when navigation buttons are clicked', () => {
         render(
             <TestWrapper>
-                <TopBar activeTab={0} onTabChange={mockSetActiveTab} onImport={mockOnImport} onExport={mockOnExport} />
+                <TopBar activeTab={0} onTabChange={mockSetActiveTab} onImport={mockOnImport} onExport={mockOnExport} onLogout={mockOnLogout} />
             </TestWrapper>
         );
 
@@ -101,7 +102,7 @@ describe('TopBar', () => {
     it('highlights the active tab', () => {
         render(
             <TestWrapper>
-                <TopBar activeTab={0} onTabChange={mockSetActiveTab} onImport={mockOnImport} onExport={mockOnExport} />
+                <TopBar activeTab={0} onTabChange={mockSetActiveTab} onImport={mockOnImport} onExport={mockOnExport} onLogout={mockOnLogout} />
             </TestWrapper>
         );
 

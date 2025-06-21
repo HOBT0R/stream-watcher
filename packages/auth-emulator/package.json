@@ -1,0 +1,11 @@
+{
+  "name": "@stream-watcher/auth-emulator",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "firebase emulators:start --only auth"
+  },
+  "devDependencies": {
+    "firebase-tools": "^14.8.0"
+  }
+} 

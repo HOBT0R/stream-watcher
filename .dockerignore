@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Dependencies
+node_modules
+packages/proxy/node_modules
+
+# Build Outputs
+dist
+packages/proxy/dist
+coverage
+storybook-static
+
+# Local Configs & Secrets
+.env
+.env.*
+packages/proxy/.env
+dev_*.pem
+mock.json
+
+# Test Artifacts & Configs
+*.test.ts
+*.test.tsx
+*.stories.tsx
+*.spec.ts
+*.spec.tsx
+playwright-report/
+test-results/
+.storybook
+packages/proxy/vitest.config.ts
+src/setupTests.ts
+
+# IDE & OS specific
+.vscode/
+.idea/
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log* 
