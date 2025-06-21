@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Channel } from '../services/api/channelService';
 import { channelService } from '../services/api/channelService';
 import { CHANNEL_POLLING } from '../constants/config';
+import { useApiClient } from '../contexts/ApiContext';
 
 export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?: number) {
+    const { apiClient } = useApiClient();
     const [channels, setChannels] = useState<Channel[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -39,7 +41,7 @@ export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?
         lastPollTimeRef.current = now;
         
         try {
-            const updatedChannels = await channelService.getChannelStatuses(channelNames);
+            const updatedChannels = await channelService.getChannelStatuses(apiClient, channelNames);
             setChannels(updatedChannels);
             setError(null);
         } catch (err) {
@@ -49,11 +51,11 @@ export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?
             setIsLoading(false);
             isPollingRef.current = false;
         }
-    }, [channelNames, pollingIntervalSeconds]);
+    }, [channelNames, pollingIntervalSeconds, apiClient]);
 
     const refreshChannel = async (channelName: string) => {
         try {
-            const updatedChannel = await channelService.getChannelStatus(channelName);
+            const updatedChannel = await channelService.getChannelStatus(apiClient, channelName);
             setChannels(prevChannels => 
                 prevChannels.map(c => 
                     c.channelName === channelName ? updatedChannel : c

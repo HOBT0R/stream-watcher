@@ -1,5 +1,5 @@
 import React from 'react';
-import { AppBar, Toolbar, Typography, Box } from '@mui/material';
+import { AppBar, Toolbar, Typography, Box, Button } from '@mui/material';
 import ThemeToggle from './components/ThemeToggle';
 import { NavButton } from '../../../NavButton';
 import AppIcon from '../../../../assets/stream-watcher.png'; 
@@ -9,9 +9,10 @@ export interface TopBarProps {
   onTabChange: (event: React.MouseEvent<HTMLButtonElement>, newValue: number) => void;
   onImport: () => void;
   onExport: () => void;
+  onLogout?: () => void;
 }
 
-export const TopBar = ({ activeTab, onTabChange }: TopBarProps) => {
+export const TopBar = ({ activeTab, onTabChange, onLogout = () => {} }: TopBarProps) => {
   return (
     <AppBar position="static" color="primary" enableColorOnDark>
       <Toolbar>
@@ -42,6 +43,7 @@ export const TopBar = ({ activeTab, onTabChange }: TopBarProps) => {
           />
           <Box sx={{ flexGrow: 1 }} />
           <ThemeToggle />
+          <Button color="inherit" onClick={onLogout}>Logout</Button>
         </Box>
       </Toolbar>
     </AppBar>

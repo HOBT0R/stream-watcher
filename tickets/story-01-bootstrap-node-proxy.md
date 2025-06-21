@@ -1,3 +1,35 @@
+Status: Complete
+Date: 2024-06-20
+
+---
+
+# Story: Bootstrap Node Proxy
+
+As a developer, I want to create a basic Node.js Express server that proxies all `/api/*` requests to a backend service (the "BFF"), so that we have a foundation for adding authentication and other middleware.
+
+## Acceptance Criteria
+-   An Express application is created inside `packages/proxy`.
+-   It uses `http-proxy-middleware` to forward any request starting with `/api/` to the target specified by the `BFF_BASE_URL` environment variable.
+-   Configuration is loaded once at start-up from environment variables, including `NODE_CONFIG_JSON` for production secrets.
+-   A `.env` file is parsed in development for local overrides via `dotenv`.
+-   A `/healthz` endpoint exists and returns a JSON object `{ "ok": true }` with a 200 status code.
+-   The proxy is tested with unit/integration tests, mocking the downstream BFF.
+
+## Tasks
+-   [x] Initialize a new Node.js project in `packages/proxy`.
+-   [x] Add Express and `http-proxy-middleware` as dependencies.
+-   [x] Create a basic Express server in `src/index.ts`.
+-   [x] Implement the proxy middleware for `/api/*`.
+-   [x] Create a `config.ts` module to handle loading from `process.env`.
+-   [x] Add a `/healthz` route.
+-   [x] Write tests for the proxy and health check endpoints using Vitest and Supertest.
+-   [x] Document local setup in `NODESERVER.md`.
+
+## Definition of Done
+-   All ACs are met.
+-   Code is reviewed and merged to the main branch.
+-   All tests are passing in CI.
+
 # Story 1 – Bootstrap Node Proxy
 
 **Epic:** Node Server Proxy & CI/CD Integration  

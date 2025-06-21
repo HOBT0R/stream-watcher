@@ -13,6 +13,7 @@ dist-ssr
 coverage
 *.tsbuildinfo
 *.local
+.env
 
 # Editor directories and files
 .vscode/*
@@ -28,3 +29,16 @@ coverage
 *storybook.log
 storybook-static
 packages/proxy/.env
+
+# testing
+/coverage
+*.lcov
+
+# keys
+dev_private.pem
+dev_public.pem
+packages/proxy/dev_private.pem
+packages/proxy/dev_public.pem
+packages/proxy/bad_private.pem
+.env
+.env

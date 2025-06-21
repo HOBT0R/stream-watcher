@@ -86,4 +86,48 @@ jobs:
           path: sbom-${{ github.sha }}.spdx.json
 ```
 
-> The job stops after pushing the image; deployment happens in the CD workflow (Story 6). 
+> The job stops after pushing the image; deployment happens in the CD workflow (Story 6).
+
+---
+
+## Appendix: Obtaining Front-End Credentials for CI/CD
+
+The React front-end requires a set of credentials at **build time** to connect to Google Identity Platform. These keys are public and are safely embedded in the final JavaScript bundle. The CI pipeline will need access to these keys to build the UI before containerization.
+
+Here is the definitive process for obtaining these keys, which is compatible with a **Cloud Run hosting environment**.
+
+### Step 1: Register a "Web App" in Firebase to get Keys
+
+Even though we are hosting the application on Cloud Run, we must register a "Web App" in the Firebase console. This step **does not** tie us to Firebase Hosting. Its only purpose is to generate the configuration object that the client-side Firebase SDK needs to identify our backend project.
+
+1.  Navigate to the **Firebase Console** and select your project.
+2.  In the Project Overview, click the **Web icon (`</>`)** to "Add an app".
+3.  Enter an **App nickname** (e.g., "Stream Watcher UI").
+4.  **Do not** check the box for "Set up Firebase Hosting". This is critical. We are only registering the client, not using Firebase's hosting product.
+5.  Click **"Register app"**.
+
+### Step 2: Retrieve the Configuration for Environment Variables
+
+After registering, Firebase will display a `firebaseConfig` object. This contains the values needed for our front-end's `.env` file and the CI pipeline's secrets.
+
+1.  From the `firebaseConfig` object, copy the values for:
+    *   `apiKey`
+    *   `authDomain`
+    *   `projectId`
+    *   `storageBucket`
+    *   `messagingSenderId`
+    *   `appId`
+
+2.  **For Local Development:** These values should be placed in a `.env` file at the root of the monorepo, prefixed with `VITE_`. For example: `VITE_FIREBASE_API_KEY="AIzaSy..."`.
+
+3.  **For the CI/CD Pipeline:** These same values must be added as **GitHub repository secrets**. The CI workflow (`.github/workflows/ci.yml`) will then use these secrets to create a temporary `.env` file for the `npm run build` step.
+
+    *   Create repository secrets named `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, etc.
+    *   The build step in the CI workflow should be modified to include:
+        ```yaml
+        - name: Create .env file for UI build
+          run: |
+            echo VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }} >> .env
+            echo VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }} >> .env
+            # ... and so on for all required keys
+        ``` 
