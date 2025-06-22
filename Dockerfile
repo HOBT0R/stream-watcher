@@ -38,7 +38,7 @@ COPY tsconfig.node.json ./
 # The hardcoded ENV block is no longer needed, as variables are now in .env
 # RUN npm install ... (this is now run after creating .env)
 RUN npm install --legacy-peer-deps --ignore-scripts
-RUN npm run build:ui:force
+RUN npm run build:ui
 
 # Stage 2: Build the proxy
 FROM node:20-alpine AS proxy-builder

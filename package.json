@@ -25,7 +25,6 @@
     "dev:ui": "vite --config vite.config.frontend.js",
     "dev:proxy": "npm --workspace=@stream-watcher/proxy run dev",
     "dev:auth": "npm --workspace=@stream-watcher/auth-emulator run dev",
-    "build:ui:force": "VITE_USE_AUTH_EMULATOR=true VITE_FIREBASE_EMULATOR_HOST=127.0.0.1:9099 vite build --config vite.config.frontend.js",
     "build:proxy": "npm --workspace=@stream-watcher/proxy run build",
     "lint:staged": "lint-staged",
     "prepare": "husky",
@@ -97,5 +96,10 @@
   },
   "overrides": {
     "storybook": "$storybook"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix"
+    ]
   }
 }
