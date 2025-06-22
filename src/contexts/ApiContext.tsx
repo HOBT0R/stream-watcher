@@ -40,6 +40,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useApiClient = () => {
     const context = useContext(ApiContext);
     if (context === undefined) {

@@ -195,4 +195,13 @@ export const ChannelProvider: React.FC<ChannelProviderProps> = ({
             {children}
         </ChannelContext.Provider>
     );
+};
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useChannelContext = () => {
+    const context = useContext(ChannelContext);
+    if (!context) {
+        throw new Error('useChannelContext must be used within a ChannelProvider');
+    }
+    return context;
 }; 
