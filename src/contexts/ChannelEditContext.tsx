@@ -56,4 +56,13 @@ export const ChannelEditProvider = ({ children }: ChannelEditProviderProps) => {
             />
         </ChannelEditContext.Provider>
     );
+};
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useChannelEditContext = () => {
+    const context = useContext(ChannelEditContext);
+    if (context === undefined) {
+        throw new Error('useChannelEdit must be used within a ChannelEditProvider');
+    }
+    return context;
 }; 

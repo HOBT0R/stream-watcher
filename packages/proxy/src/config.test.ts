@@ -11,13 +11,12 @@ describe('Proxy Config', () => {
         process.env = { ...originalEnv }; // Restore original env
     });
 
-    it('should throw an error if critical environment variables are missing', async () => {
-        // Unset required variables
-        delete process.env.BFF_BASE_URL;
-        delete process.env.BFF_API_KEY;
+    it('should throw an error if FIREBASE_PROJECT_ID is missing and JWT verification is enabled', async () => {
+        process.env.SKIP_JWT_VERIFY = 'false';
+        delete process.env.FIREBASE_PROJECT_ID;
+        delete process.env.VITE_FIREBASE_PROJECT_ID; // Ensure all fallbacks are gone
 
-        // Use a dynamic import to re-run the module-level code
-        await expect(import('./config.js')).rejects.toThrow('Missing critical configuration');
+        await expect(import('./config.js')).rejects.toThrow('Missing critical configuration. Ensure FIREBASE_PROJECT_ID is set.');
     });
 
     it('should load configuration from individual environment variables', async () => {
@@ -40,26 +39,22 @@ describe('Proxy Config', () => {
         expect(config.jwt.skipVerification).toBe(true);
     });
 
-    it('should load configuration from NODE_CONFIG_JSON environment variable', async () => {
-        const jsonConfig = {
-            port: 9999,
-            bffBaseUrl: 'http://json-bff.com',
-            bffApiKey: 'json-api-key',
-            jwt: {
-                jwksUri: 'http://json-jwks.com',
-                issuer: 'json-issuer',
-                audience: 'json-audience',
-                skipVerification: true,
-            },
-            firebase: {
-                projectId: 'json-project-id',
-            },
+    it('should load configuration from APP_CONFIG_JSON environment variable', async () => {
+        const secretConfig = {
+            cloudRunUrl: 'http://json-bff.com',
+            serviceApiKey: 'json-api-key',
         };
-        process.env.NODE_CONFIG_JSON = JSON.stringify(jsonConfig);
+        process.env.APP_CONFIG_JSON = JSON.stringify(secretConfig);
+        process.env.FIREBASE_PROJECT_ID = 'test-project-id'; // Required to pass validation
 
         const { default: config } = await import('./config.js');
 
-        expect(config).toEqual(jsonConfig);
+        // Check that the config is updated from the JSON
+        expect(config.bffBaseUrl).toBe(secretConfig.cloudRunUrl);
+        expect(config.bffApiKey).toBe(secretConfig.serviceApiKey);
+
+        // Check that other values remain default
+        expect(config.port).toBe(8080);
     });
 
     it('should use default values when no environment variables are set', async () => {

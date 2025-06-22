@@ -45,4 +45,13 @@ export const VideoProvider = ({ children }: VideoProviderProps) => {
       {children}
     </VideoContext.Provider>
   );
+};
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useVideoContext = () => {
+  const context = useContext(VideoContext);
+  if (!context) {
+    throw new Error('useVideoContext must be used within a VideoProvider');
+  }
+  return context;
 }; 

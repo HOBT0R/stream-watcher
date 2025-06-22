@@ -13,6 +13,7 @@ export interface ThemeContextType {
     toggleTheme: () => void;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 /**
@@ -40,12 +41,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     );
 };
 
-/**
- * A hook for accessing the theme context.
- * This provides access to the current theme state (`isDarkMode`) and the `toggleTheme` function.
- *
- * @returns The theme context.
- */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
     const context = useContext(ThemeContext);
     if (context === undefined) {
