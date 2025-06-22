@@ -3,21 +3,10 @@ import '../test-setup.ts';
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, clearJwksClient } from './auth.js';
+import * as config from '../config.js';
 import * as jose from 'jose';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-
-// Mock the config module to point to our fake JWKS host
-// We hardcode the string here to avoid vi.mock hoisting issues with variables.
-vi.mock('../config.js', () => ({
-    default: {
-        jwt: {
-            jwksUri: 'http://mock-jwks-host.com/.well-known/jwks.json',
-            issuer: 'mock-issuer',
-            audience: 'mock-audience',
-        },
-    },
-}));
 
 // --- MSW Server Setup ---
 // This server will intercept the 'fetch' call made by 'jose'
@@ -48,6 +37,20 @@ describe('Auth Middleware (verifyToken)', () => {
     afterAll(() => server.close());
     beforeEach(() => {
         vi.resetAllMocks();
+
+        // Spy on the config and set the values needed for these tests
+        vi.spyOn(config, 'default', 'get').mockReturnValue({
+            port: 8080,
+            bffBaseUrl: '',
+            bffApiKey: '',
+            firebase: { projectId: 'test-project' }, // A project ID is required
+            jwt: {
+                jwksUri: 'http://mock-jwks-host.com/.well-known/jwks.json',
+                issuer: 'mock-issuer',
+                audience: 'mock-audience',
+            },
+        });
+
         server.resetHandlers();
         clearJwksClient(); // Important to clear the JWKS cache in our auth module
 

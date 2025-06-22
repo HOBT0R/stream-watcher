@@ -31,6 +31,9 @@ steps:
         docker build \
           --tag 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA' \
           --build-arg FIREBASE_BUILD_ENV="$$FIREBASE_BUILD_ENV" \
+          # Pass the Project ID as a build-time argument for the UI.
+          # This bakes the variable into the static client-side code.
+          --build-arg VITE_FIREBASE_PROJECT_ID=$PROJECT_ID \
           .
     secretEnv:
       - 'FIREBASE_BUILD_ENV'
@@ -54,8 +57,14 @@ steps:
       - 'us-central1'
       - '--platform'
       - 'managed'
-      - '--set-secrets'
-      - 'APP_CONFIG_JSON=app-config:latest' # Runtime secret for the proxy
+      - '--set-secrets=APP_CONFIG_JSON=app-config:latest'
+      # Set run-time environment variables for the proxy server.
+      # These are used by the running Node.js process, not the UI build.
+      - '--set-env-vars'
+      - >-
+        FIREBASE_PROJECT_ID=$PROJECT_ID,
+        JWT_ISSUER=https://securetoken.google.com/$PROJECT_ID,
+        JWT_AUDIENCE=$PROJECT_ID
       - '--quiet'
 
 # Store the final image in the build results
