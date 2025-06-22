@@ -62,7 +62,8 @@ steps:
       - >-
         FIREBASE_PROJECT_ID=$PROJECT_ID,
         JWT_ISSUER=https://securetoken.google.com/$PROJECT_ID,
-        JWT_AUDIENCE=$PROJECT_ID
+        JWT_AUDIENCE=$PROJECT_ID,
+        JWT_JWKS_URI=https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com
       - '--quiet'
 
 # Store the final image in the build results

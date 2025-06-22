@@ -184,15 +184,23 @@ stream-watcher/
 -   **`ChannelCard`**: A card that displays the status of a single channel. It includes actions to copy the channel name, get a stream key, open the channel on Twitch, and a play button to watch the live stream directly in the card. The video player is only mounted when the card is visible and actively playing.
 -   **`ThemeToggle`**: A simple switch component for toggling between light and dark modes.
 
-## Authentication
+## 🔐  Authentication overview (updated)
 
-The application uses Google Identity Platform for user authentication, supporting sign-in via email and password.
+The UI → Proxy → BFF flow now uses Google-managed identities.
 
-1.  **Login:** The user signs in through the UI. On success, Google Identity Platform issues a JWT ID token.
-2.  **Token Forwarding:** The React application stores this token and automatically attaches it to every subsequent API request in an `Authorization: Bearer <token>` header.
-3.  **Proxy Verification:** The Node.js proxy intercepts each API request and uses its authentication middleware to verify the token's signature and claims against Google's public keys. If the token is valid, the request is forwarded to the back-end; otherwise, a `401 Unauthorized` error is returned.
+| Environment | User Auth | Proxy → BFF Auth |
+|-------------|-----------|-------------------|
+| Local       | Disabled  | None              |
+| Docker      | Firebase Auth **emulator** | None |
+| Production  | Firebase Auth | Google-signed **ID token** (service-to-service) |
 
-For local development, the application uses the **Firebase Auth Emulator**, which allows for testing the complete authentication flow without connecting to live Google services.
+Key environment variables:
+
+* `SKIP_JWT_VERIFY` – set to `true` to disable user-JWT verification (local).
+* `JWT_JWKS_URI` – public-key endpoint used in production (set automatically in Cloud Build).
+* `BFF_BASE_URL` – target BFF URL, no longer needs an API key.
+
+`BFF_API_KEY` has been **removed** from all runtime paths.
 
 ## Available Scripts
 - `npm run dev` - Start development server
@@ -238,7 +246,7 @@ The proxy configuration manages server behavior, authentication, and connection 
 | Variable | Local (`.env`) | Docker (`proxy.env.docker`) | Production (Cloud Run) |
 |---|---|---|---|
 | `PORT` | Optional. Defaults to `8080`. | Optional. Defaults to `8080`. | **Required.** Set by the Cloud Run environment to `8080`. |
-| `BFF_BASE_URL` & `BFF_API_KEY` | Optional. Defaults to values suitable for local development. | **Required.** Defines the URL and API key for the BFF service. | **Required.** Injected as a single `APP_CONFIG_JSON` secret from Google Secret Manager at runtime. |
+| `BFF_BASE_URL` | Optional. Defaults to values suitable for local development. | **Required.** Defines the URL and API key for the BFF service. | **Required.** Injected as a single `APP_CONFIG_JSON` secret from Google Secret Manager at runtime. |
 | `SKIP_JWT_VERIFY` | Optional. Set to `true` to disable auth checks. | Optional. Set to `true` to disable auth checks. | Not used. Defaults to `false` (verification is always enabled). |
 | `JWT_JWKS_URI` | **Required** (if JWT verification is enabled). | **Required** (if JWT verification is enabled). | **Required.** Sourced from the `cloudbuild.yaml` deployment step. |
 | `JWT_ISSUER` | **Required** (if JWT verification is enabled). | **Required** (if JWT verification is enabled). | **Required.** Sourced from the `cloudbuild.yaml` deployment step. |
