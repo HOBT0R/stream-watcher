@@ -1,0 +1,41 @@
+services:
+  stream-watcher:
+    build:
+      context: .
+    image: stream-watcher:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+      auth-emulator:
+        condition: service_healthy
+    env_file:
+      - ui.env.docker
+      - packages/proxy/proxy.env.docker
+    volumes:
+      - ./packages/proxy/dev_public.pem:/secrets/jwt_pub.pem:ro
+    environment:
+      NODE_ENV: production
+      JWT_PUBLIC_KEY: file:///secrets/jwt_pub.pem
+      JWT_JWKS_URL: ""
+      DEBUG: http-proxy-middleware:*
+    restart: unless-stopped
+  auth-emulator:
+    build:
+      context: ./packages/auth-emulator
+    ports:
+      - "9099:9099"
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "curl", "http://localhost:9099"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file:
+      - packages/auth-emulator/.env.docker
+    environment:
+      - FIREBASE_PROJECT_ID=stream-watcher-dev
+    networks:
+      default:
+        aliases:
+          - auth-emulator
+    restart: unless-stopped 

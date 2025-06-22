@@ -1,14 +1,13 @@
 import axios from 'axios';
 import type { InternalAxiosRequestConfig } from 'axios';
 import { API } from '../../constants/config';
+import { auth } from '../../firebase';
 
 // Use explicit API base URL during development so the Vite dev server can
 // proxy or hit the BFF directly. For the built/released app (production),
 // use a relative URL so that requests go to the same origin/port where the
 // frontend is served, letting the preview server handle proxying.
-const API_BASE_URL = import.meta.env.DEV
-  ? (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000')
-  : '';
+const API_BASE_URL = '';
 
 // Create axios instance with default config
 export const apiClient = axios.create({
@@ -24,7 +23,13 @@ export const apiClient = axios.create({
 
 // Request interceptor for API calls
 apiClient.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
+    async (config: InternalAxiosRequestConfig) => {
+        const user = auth.currentUser;
+        if (user) {
+            const token = await user.getIdToken();
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+
         // Log request details in development
         if (import.meta.env.DEV) {
             console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);

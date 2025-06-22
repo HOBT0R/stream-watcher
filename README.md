@@ -19,38 +19,109 @@ A React-based frontend application for monitoring Twitch channel statuses. This 
 - The video player is only loaded when the card is visible in the viewport, improving performance.
 
 ## Prerequisites
-- Node.js 18.x or higher
+- Node.js 20.x or higher
 - npm 9.x or higher
+- Docker & Docker Compose
 
 ## Quick Start
-1. Clone the repository
-```bash
-git clone https://github.com/rapidraptor/stream-watcher.git
-cd stream-watcher
-```
 
-2. Install dependencies
+There are two ways to run the application: **locally with Node.js** for development, or as a fully **containerized application with Docker**.
+
+### Running Locally with Node.js
+
+This method is ideal for front-end or proxy development, as it uses Vite's hot-reloading server. This setup bypasses authentication, allowing you to work on features without needing to log in.
+
+**1. Configure Environment**
+
+You will need two separate `.env` files: one for the UI and one for the proxy.
+
+*   **UI Environment:** Create a file named `.env` in the **project root** with the following content. This configures the UI to skip the login page.
+    ```env
+    VITE_USE_AUTH_EMULATOR=false
+    VITE_FIREBASE_EMULATOR_HOST=
+    VITE_FIREBASE_PROJECT_ID=stream-watcher-dev
+    VITE_SKIP_LOGIN=true
+    VITE_FIREBASE_API_KEY=fake-api-key
+    VITE_FIREBASE_AUTH_DOMAIN=localhost
+    VITE_FIREBASE_STORAGE_BUCKET=stream-watcher-dev.appspot.com
+    ```
+
+*   **Proxy Environment:** Create a `.env` file for the proxy service. The default configuration skips JWT verification.
+    ```bash
+    # Navigate to the proxy directory
+    cd packages/proxy
+
+    # Copy the example environment file
+    cp example.env .env
+
+    # Return to the root
+    cd ../..
+    ```
+
+**2. Install Dependencies**
 ```bash
 npm install
 ```
 
-3. Start development server
+**3. Start Development Servers**
+
+> **Note**: Before starting, ensure your back-end-for-frontend (BFF) service is running and accessible, as the proxy will forward all `/api/*` requests to it, based on the `BFF_BASE_URL` in `packages/proxy/.env`.
+
 ```bash
 npm run dev
 ```
+This command concurrently starts the React UI (on port 5173), the Node.js proxy (on port 8080), and the Firebase Auth emulator. You can access the UI at `http://localhost:5173`.
+
+### Running with Docker
+
+This method runs the entire application stack in containers, including the UI, the proxy, and the Firebase Auth emulator for a production-like test environment.
+
+**1. Configure Environment**
+
+The Docker setup requires two dedicated environment files.
+
+*   **UI Build Environment:** From the project root, create `ui.env.docker` by copying the example:
+    ```bash
+    cp example.ui.env.docker ui.env.docker
+    ```
+*   **Proxy Runtime Environment:** In the `packages/proxy` directory, create `proxy.env.docker`:
+    ```bash
+    cp packages/proxy/example.proxy.env.docker packages/proxy/proxy.env.docker
+    ```
+
+**2. Build and Start Containers**
+```bash
+# Build the images and start the services in the background
+docker compose up --build -d
+```
+Once started, the application will be accessible at `http://localhost:8080`.
+
+**3. Create a Test User (First Time Only)**
+
+The Docker environment uses the Firebase Auth Emulator for login.
+*   Navigate to the Emulator UI at **`http://localhost:4000`**.
+*   Click on the **Authentication** tab and click **"Add user"**.
+*   Create a user (e.g., `test@example.com` / `password`).
+*   You can now use these credentials to log in to the application at `http://localhost:8080`.
 
 ## Architecture Overview
 
-This application is built with a modern React architecture, emphasizing separation of concerns through hooks and contexts.
+This application consists of a React front-end and a Node.js proxy server that manages all API traffic. This design enhances security by ensuring the front-end never directly communicates with the back-end services. The proxy is responsible for authentication, logging, and routing requests.
+
+```
+┌──────────────────┐        ┌────────────┐        ┌────────────┐
+│   Browser (UI)   │  HTTPS │  Node App  │  HTTPS │    BFF     │
+└──────────────────┘  --->  └────────────┘  --->  └────────────┘
+```
 
 ### Core Concepts
 
+**Front-End:**
 - **State Management**:
     - **`useLocalStorage`**: A custom hook that persists state to the browser's local storage, used for channel configurations and theme preferences.
     - **`useChannelManagement`**: A hook that centralizes all logic for managing channels (add, update, delete, import, export).
     - **`useChannelStatus`**: A hook responsible for polling the backend to get the online/offline status of channels.
     - **`useVideo`**: A hook and context that manages which channels are currently playing video, enforcing a concurrency limit and providing actions to start/stop playback.
-
 
 - **Contexts**:
     - **`ThemeContext`**: Provides theme-related state (`isDarkMode`) and functions (`toggleTheme`) to the entire application. It also detects the user's system preference for dark mode.
@@ -58,9 +129,22 @@ This application is built with a modern React architecture, emphasizing separati
     - **`ChannelEditContext`**: Manages the state of the channel editing dialog, such as which channel is being edited and whether the dialog is open.
     - **`ChannelFilterContext`**: Manages the global filter state for the channel dashboard, including search text and role filters.
 
+**Back-End (Proxy):**
+
+The Node.js proxy server, located in `packages/proxy`, is a critical component that sits between the React UI and the back-end-for-frontend (BFF) service.
+
+-   **Authentication:** It secures the application by verifying JSON Web Tokens (JWTs) on all incoming API requests using the `jose` library. For local development, it can be configured to bypass JWT verification for easier testing.
+-   **Request Proxying:** It uses `http-proxy-middleware` to transparently forward all valid API requests to the appropriate back-end service, abstracting the back-end topology from the UI.
+-   **Configuration:** The proxy is configured through environment variables, with support for `.env` files for local development. This includes settings for the BFF's URL, port, and authentication keys.
+
 ### Project Structure
 ```
 stream-watcher/
+|-- packages/
+|   |-- proxy/
+|       |-- src/
+|           |-- middleware/
+|           |-- ...
 |-- src/
     |-- assets/
     |-- components/
@@ -100,8 +184,15 @@ stream-watcher/
 -   **`ChannelCard`**: A card that displays the status of a single channel. It includes actions to copy the channel name, get a stream key, open the channel on Twitch, and a play button to watch the live stream directly in the card. The video player is only mounted when the card is visible and actively playing.
 -   **`ThemeToggle`**: A simple switch component for toggling between light and dark modes.
 
+## Authentication
 
+The application uses Google Identity Platform for user authentication, supporting sign-in via email and password.
 
+1.  **Login:** The user signs in through the UI. On success, Google Identity Platform issues a JWT ID token.
+2.  **Token Forwarding:** The React application stores this token and automatically attaches it to every subsequent API request in an `Authorization: Bearer <token>` header.
+3.  **Proxy Verification:** The Node.js proxy intercepts each API request and uses its authentication middleware to verify the token's signature and claims against Google's public keys. If the token is valid, the request is forwarded to the back-end; otherwise, a `401 Unauthorized` error is returned.
+
+For local development, the application uses the **Firebase Auth Emulator**, which allows for testing the complete authentication flow without connecting to live Google services.
 
 ## Available Scripts
 - `npm run dev` - Start development server
@@ -112,7 +203,17 @@ stream-watcher/
 
 ## Configuration
 
-### Default Channels
+### Proxy Server (Back-End)
+
+To run the proxy server locally, you'll need to configure its environment.
+
+1.  Navigate to the `packages/proxy` directory.
+2.  Copy the example environment file: `cp example.env .env`.
+3.  Edit the `.env` file to set the required variables:
+    *   `BFF_BASE_URL`: The URL of the back-end-for-frontend service (e.g., `http://localhost:3001`).
+    *   `SKIP_JWT_VERIFY`: Set to `true` to bypass JWT verification for local development, allowing you to test API endpoints without a valid token. When `false` or unset, the proxy will require a valid JWT.
+
+### Default Channels (Front-End)
 The application comes with a set of default channels that are used when no configuration has been saved. You can modify these defaults by editing the `src/config/defaults.json` file:
 
 ```json
@@ -148,6 +249,7 @@ The preferences section configures:
 - `showOffline`: Whether to show offline channels
 
 Note: These defaults are only used when no configuration has been saved in the browser's localStorage. Once a user makes changes through the UI, their configuration will be saved and used instead of these defaults.
+
 
 ### Managing Channels
 

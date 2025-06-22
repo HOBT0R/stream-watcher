@@ -24,5 +24,9 @@ export default tseslint.config({ ignores: ['dist', 'coverage', 'public'] }, {
       'warn',
       { allowConstantExport: true },
     ],
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      { 'argsIgnorePattern': '^_', 'varsIgnorePattern': '^_', 'caughtErrorsIgnorePattern': '^_' }
+    ]
   },
 }, storybook.configs["flat/recommended"]);
