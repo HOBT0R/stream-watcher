@@ -54,6 +54,11 @@ export function createApp(
         },
         proxyTimeout: 10000,
         timeout: 10000,
+        // Ensure BFF receives the original /api prefix that Express strips.
+        // If the incoming request is /api/v1/statuses, Express forwards
+        // "/v1/statuses" to the proxy. We prepend the prefix back so the
+        // upstream sees "/api/v1/statuses" as expected.
+        pathRewrite: (path: string, _req: Request) => `/api${path}`,
         onProxyReq: (proxyReq: http.ClientRequest) => {
             proxyReq.setHeader('x-service-key', config.bffApiKey);
         },

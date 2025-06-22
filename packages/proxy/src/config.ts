@@ -6,6 +6,7 @@ export interface AppConfig {
     bffApiKey: string;
     jwt: {
         skipVerification?: boolean;
+        publicKey?: string;
         jwksUri?: string;
         issuer?: string;
         audience?: string;
@@ -22,6 +23,7 @@ let config: AppConfig = {
     bffApiKey: '',
     jwt: {
         skipVerification: false,
+        publicKey: '',
         jwksUri: '',
         issuer: '',
         audience: '',
@@ -42,6 +44,7 @@ if (process.env.NODE_CONFIG_JSON) {
     config.bffBaseUrl = process.env.BFF_BASE_URL || 'http://localhost:3001';
     config.bffApiKey = process.env.BFF_API_KEY || '';
     config.jwt.skipVerification = process.env.SKIP_JWT_VERIFY === 'true';
+    config.jwt.publicKey = process.env.JWT_PUBLIC_KEY || '';
     config.jwt.jwksUri = process.env.JWT_JWKS_URI || '';
     config.jwt.issuer = process.env.JWT_ISSUER || '';
     config.jwt.audience = process.env.JWT_AUDIENCE || '';

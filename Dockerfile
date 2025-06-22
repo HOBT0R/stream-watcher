@@ -1,6 +1,27 @@
 # Stage 1: Build the UI
 FROM node:20-alpine AS ui-builder
 WORKDIR /app
+
+# Accept the environment file content as a build argument. It will be empty for local builds.
+ARG FIREBASE_BUILD_ENV
+
+# Check if FIREBASE_BUILD_ENV is provided. If so, use it to create .env.
+# Otherwise, create a fallback .env file for local Docker development.
+RUN if [ -n "$FIREBASE_BUILD_ENV" ]; then \
+      echo "Using FIREBASE_BUILD_ENV from build-arg" && \
+      echo "$FIREBASE_BUILD_ENV" > .env; \
+    else \
+      echo "FIREBASE_BUILD_ENV not provided, creating default .env for local Docker" && \
+      echo "VITE_USE_AUTH_EMULATOR=true" > .env && \
+      echo "VITE_FIREBASE_EMULATOR_HOST=auth-emulator:9099" >> .env && \
+      echo "VITE_FIREBASE_API_KEY=emulator" >> .env && \
+      echo "VITE_FIREBASE_PROJECT_ID=stream-watcher-dev" >> .env && \
+      echo "VITE_FIREBASE_AUTH_DOMAIN=stream-watcher.firebaseapp.com" >> .env && \
+      echo "VITE_FIREBASE_STORAGE_BUCKET=stream-watcher.appspot.com" >> .env && \
+      echo "VITE_FIREBASE_MESSAGING_SENDER_ID=fake-sender-id" >> .env && \
+      echo "VITE_FIREBASE_APP_ID=fake-app-id" >> .env; \
+    fi
+
 COPY package*.json ./
 COPY src ./src
 COPY public ./public
@@ -10,17 +31,8 @@ COPY vite.config.proxy.js ./
 COPY tsconfig.json ./
 COPY tsconfig.node.json ./
 
-# Set all build-time environment variables in a single block
-# This ensures they are all available for the Vite build process.
-ENV VITE_USE_AUTH_EMULATOR="true" \
-    VITE_FIREBASE_EMULATOR_HOST="127.0.0.1:9099" \
-    VITE_FIREBASE_API_KEY="emulator" \
-    VITE_FIREBASE_PROJECT_ID="stream-watcher-dev" \
-    VITE_FIREBASE_AUTH_DOMAIN="stream-watcher.firebaseapp.com" \
-    VITE_FIREBASE_STORAGE_BUCKET="stream-watcher.appspot.com" \
-    VITE_FIREBASE_MESSAGING_SENDER_ID="fake-sender-id" \
-    VITE_FIREBASE_APP_ID="fake-app-id"
-
+# The hardcoded ENV block is no longer needed, as variables are now in .env
+# RUN npm install ... (this is now run after creating .env)
 RUN npm install --legacy-peer-deps --ignore-scripts
 RUN npm run build:ui:force
 

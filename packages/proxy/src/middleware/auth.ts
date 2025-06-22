@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import * as jose from 'jose';
 import config from '../config.js';
+import fs from 'fs/promises';
 
 /**
  * Extends the Express `Request` object to include an optional `user` property.
@@ -8,8 +9,24 @@ import config from '../config.js';
  */
 
 let jwksClient: ReturnType<typeof jose.createRemoteJWKSet> | undefined;
+let cachedPublicKey: jose.KeyLike | undefined;
 
-function getJwksClient() {
+async function getVerificationKey(): Promise<jose.KeyLike | ReturnType<typeof jose.createRemoteJWKSet>> {
+    // Prefer static public key if provided
+    if (config.jwt.publicKey) {
+        if (!cachedPublicKey) {
+            let pem = config.jwt.publicKey;
+            // If value starts with file:// treat as path
+            if (pem.startsWith('file://')) {
+                const path = pem.replace('file://', '');
+                pem = await fs.readFile(path, 'utf-8');
+            }
+            cachedPublicKey = await jose.importSPKI(pem, 'RS256');
+        }
+        return cachedPublicKey;
+    }
+
+    // Otherwise fallback to remote JWKS
     if (!jwksClient) {
         if (!config.jwt.jwksUri) {
             throw new Error('JWKS URI not configured');
@@ -21,6 +38,7 @@ function getJwksClient() {
 
 export function clearJwksClient() {
     jwksClient = undefined;
+    cachedPublicKey = undefined;
 }
 
 export async function verifyToken(
@@ -44,10 +62,15 @@ export async function verifyToken(
   const token = authHeader.split(' ')[1];
 
   try {
-    const { payload } = await jose.jwtVerify(token, getJwksClient(), {
-        issuer: config.jwt.issuer,
-        audience: config.jwt.audience,
-    });
+    const key = await getVerificationKey();
+    const { payload } = await jose.jwtVerify(
+        token,
+        key as Parameters<typeof jose.jwtVerify>[1],
+        {
+            issuer: config.jwt.issuer,
+            audience: config.jwt.audience,
+        },
+    );
 
     req.user = { sub: payload.sub };
     next();

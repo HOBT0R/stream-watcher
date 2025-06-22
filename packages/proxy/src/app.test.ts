@@ -57,6 +57,9 @@ describe('Express App', () => {
                 issuer: '',
                 audience: '',
             },
+            firebase: {
+                projectId: '',
+            },
         };
         app = createApp(mockConfig);
     });
@@ -95,7 +98,7 @@ describe('Express App', () => {
     it('should proxy GET requests to /api/some/path and rewrite the path', async () => {
         const response = await request(app).get('/api/some/path');
         expect(response.status).toBe(200);
-        expect(response.body.url).toBe('/some/path');
+        expect(response.body.url).toBe('/api/some/path');
         expect(response.body.method).toBe('GET');
     });
 
@@ -107,6 +110,6 @@ describe('Express App', () => {
         
         expect(response.status).toBe(200);
         expect(response.body.method).toBe('POST');
-        expect(response.body.url).toBe('/submit');
+        expect(response.body.url).toBe('/api/submit');
     });
 }); 

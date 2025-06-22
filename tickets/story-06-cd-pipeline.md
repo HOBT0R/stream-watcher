@@ -1,4 +1,12 @@
+Status: Obsolete
+Date: 2024-06-21
+
+---
 # Story 6 – CD Pipeline (Cloud Run Deploy)
+
+**This story is now obsolete.** The deployment steps have been merged into the main CI pipeline defined in `cloudbuild.yaml` as part of `story-05`, in order to maintain consistency with other projects.
+
+---
 
 **Epic:** Node Server Proxy & CI/CD Integration  
 **Estimate:** 0.5 developer-day

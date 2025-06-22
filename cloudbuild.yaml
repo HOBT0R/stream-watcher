@@ -1,0 +1,61 @@
+steps:
+  # 1. Install all dependencies
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install', '--legacy-peer-deps']
+
+  # 2. Run linter
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['run', 'lint']
+
+  # 3. Run unit tests
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['test']
+
+  # 4. Build the Docker image, passing the Firebase config as a build argument
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        docker build \
+          --tag 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA' \
+          --build-arg FIREBASE_BUILD_ENV="$$FIREBASE_BUILD_ENV" \
+          .
+    secretEnv:
+      - 'FIREBASE_BUILD_ENV'
+
+  # 5. Push the image to Google Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA'
+
+  # 6. Deploy to Cloud Run with runtime secrets for the proxy
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'stream-watcher-ui-proxy' # The name of our Cloud Run service
+      - '--image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--set-secrets'
+      - 'APP_CONFIG_JSON=app-config:latest' # Runtime secret for the proxy
+      - '--quiet'
+
+# Store the final image in the build results
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA'
+
+# Define which secrets to make available to the build steps
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/FIREBASE_BUILD_ENV/versions/latest
+      env: 'FIREBASE_BUILD_ENV'
+
+options:
+  logging: CLOUD_LOGGING_ONLY 

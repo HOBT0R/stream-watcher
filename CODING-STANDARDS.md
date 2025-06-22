@@ -22,7 +22,7 @@ This document outlines the coding standards and best practices to be followed in
 
 2.  **Non-Component Files**:
     -   Name: `camelCase.ts` (e.g., `channelUtils.ts`, `useChannelManagement.ts`).
-    -   This includes hooks, utilities, contexts, and service files.
+    -   This includes hooks, utilities, contexts, and service files for the front-end, as well as all source files for the back-end proxy (e.g., `middleware/auth.ts`, `config.ts`).
 
 3.  **Directory/Folder Names**:
     -   Name: `PascalCase` for component folders, `camelCase` for others.
@@ -80,6 +80,17 @@ export const MyComponent = ({...}) => {
 
 ---
 
+## Back-End (Proxy) Design
+
+The Node.js proxy follows a distinct set of design principles to ensure it remains a lightweight, secure, and maintainable pass-through layer.
+
+-   **Single-Responsibility Middleware**: Each cross-cutting concern (e.g., authentication, logging, request proxying) should be implemented in its own middleware function.
+-   **Centralized Configuration**: All configuration should be loaded from environment variables at application start-up and consolidated into a single, immutable config object. This prevents configuration drift and ensures consistency.
+-   **Standardized Error Handling**: A dedicated error-handling middleware should be used to catch all errors and format them into a consistent JSON response, preventing stack traces and other sensitive information from leaking.
+-   **Startup-Only Initialization**: All initializations, such as connecting to databases or setting up proxy handlers, should occur once when the application starts. The server should not perform initialization logic on a per-request basis.
+
+---
+
 ## State Management
 
 - **`useState`**: Use for simple, local component state (e.g., toggling a dialog).
@@ -109,6 +120,9 @@ To keep imports clean and readable, we use path aliases.
 
 - **Unit Tests**: Every hook and utility function should have unit tests.
 - **Component Tests**: Every component should have tests covering its states and user interactions. Use `@testing-library/react`.
+- **Back-End Tests**:
+    -   **Unit/Integration Tests**: The proxy server should have comprehensive tests for its middleware and API endpoints using `supertest`.
+    -   **Mocking**: External services, such as downstream APIs or authentication providers (e.g., JWKS endpoints), should be mocked using libraries like `msw` to ensure reliable and isolated tests.
 - **Storybook**: Create stories for components to document their appearance and behavior in isolation. Interaction tests can be added to stories to verify functionality.
 
 ---

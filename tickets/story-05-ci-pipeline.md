@@ -1,92 +1,66 @@
-# Story 5 – CI Pipeline
+# Story 5 – CI Pipeline with Google Cloud Build
 
 **Epic:** Node Server Proxy & CI/CD Integration  
 **Estimate:** 1 developer-day
 
 ## Context
-A reliable CI pipeline ensures code quality and produces a deployable Docker image for every commit.
+To maintain consistency with other projects in the ecosystem, we will use Google Cloud Build for our Continuous Integration pipeline. This pipeline will be responsible for running quality checks, building a production-ready Docker image, and pushing it to Google Artifact Registry.
 
 ## Acceptance Criteria
-1. **Workflow File** – `.github/workflows/ci.yml` triggers on PR and push to `main`.
-2. **Setup** – Caches npm cache (`~/.npm/_cacache`) via `actions/cache` keyed by lockfile hash.
-3. **Quality Gates** – Runs `npm run lint` and `npm test -- --coverage`; fails if coverage < 95%.
-4. **Docker Build** – Builds image using the Dockerfile from Story 5 and tags with commit SHA.
-5. **Artifact Registry Push** – Pushes image to `us-docker.pkg.dev/<gcp-project>/stream-watcher/ui-proxy:<sha>` using Workload Identity Federation or a service-account key secret.
-6. **Image Provenance** – Generates SBOM via `cosign attest` or `docker sbom` and attaches to the image.
-7. **Status Badges** – README shows CI status badge.
-8. **GitHub → GCP Auth** – Repository secrets `GCP_WORKLOAD_ID_PROVIDER` and `GCP_SA_EMAIL` (or `GCP_SERVICE_ACCOUNT_KEY`) are created and the workflow successfully authenticates using them.
+1.  **Workflow File** – A `cloudbuild.yaml` file exists in the project root.
+2.  **Quality Gates** – The build runs `npm run lint` and `npm test`. The build must fail if any tests or linting checks fail.
+3.  **Docker Build** – On success, the pipeline builds the root `Dockerfile` and tags the resulting image as `us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA`.
+4.  **Artifact Registry Push** – The tagged image is pushed to Google Artifact Registry.
+5.  **Trigger** – A Cloud Build trigger is configured to automatically run the pipeline on every push to the `main` branch.
 
-## Technical Notes
-* Use `google-github-actions/setup-gcloud` to authenticate in the free tier.
-* Pin Node LTS version in `actions/setup-node`.
-* Create a GCP Workload-Identity-Federation provider that trusts `token.actions.githubusercontent.com` for this repo and grant the chosen service account the `Artifact Registry Writer` role.  Store the provider resource name and SA e-mail as GitHub secrets mentioned above.
+## Technical Implementation
 
-## Workflow Steps (reference implementation)
+The `cloudbuild.yaml` will consist of the following steps, executed in order:
+
+1.  **Install Dependencies**: Run `npm install` to prepare the environment for testing and linting.
+2.  **Lint**: Run `npm run lint` to check for code quality issues.
+3.  **Test**: Run `npm run test` to execute the automated test suite.
+4.  **Build Docker Image**: Use the standard Docker builder to execute `docker build` using the `Dockerfile` in the root. The UI's build-time environment variables will be sourced from the `ui.env.docker` file.
+5.  **Push Docker Image**: Push the newly created image to the specified Google Artifact Registry path.
+
+### Example `cloudbuild.yaml` Structure
+
 ```yaml
-name: CI
-on:
-  pull_request:
-  push:
-    branches: [main]
+steps:
+  # 1. Install all dependencies
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install', '--legacy-peer-deps']
 
-jobs:
-  build-test-publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write          # for Workload Identity Federation
-    steps:
-      - uses: actions/checkout@v4
+  # 2. Run linter
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['run', 'lint']
 
-      - name: Use Node LTS
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
+  # 3. Run unit tests
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['test']
 
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm/_cacache
-          key: npm-${{ hashFiles('package-lock.json') }}
+  # 4. Build the Docker image, sourcing UI build args from ui.env.docker
+  # Note: cloudbuild automatically has access to the files in the repo
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--tag'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA'
+      - '.'
 
-      - name: Install deps
-        run: npm ci --legacy-peer-deps
+  # 5. Push the image to Google Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA'
 
-      - name: Lint & Unit Tests
-        run: |
-          npm run lint
-          npm test -- --coverage
+# Store the final image in the build results
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA'
 
-      - name: Build Docker image
-        run: |
-          docker build -t ui-proxy:${{ github.sha }} .
-
-      - name: Authenticate GCP
-        uses: google-github-actions/auth@v1
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_ID_PROVIDER }}
-          service_account: ${{ secrets.GCP_SA_EMAIL }}
-
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker us-docker.pkg.dev --quiet
-
-      - name: Push image
-        run: |
-          docker tag ui-proxy:${{ github.sha }} us-docker.pkg.dev/$PROJECT/stream-watcher/ui-proxy:${{ github.sha }}
-          docker push us-docker.pkg.dev/$PROJECT/stream-watcher/ui-proxy:${{ github.sha }}
-
-      - name: Generate SBOM
-        run: docker sbom ui-proxy:${{ github.sha }} > sbom-${{ github.sha }}.spdx.json
-
-      - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom
-          path: sbom-${{ github.sha }}.spdx.json
+options:
+  logging: CLOUD_LOGGING_ONLY
 ```
-
-> The job stops after pushing the image; deployment happens in the CD workflow (Story 6).
 
 ---
 
