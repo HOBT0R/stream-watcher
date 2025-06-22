@@ -1,4 +1,15 @@
 steps:
+  # 0. Create Artifact Registry repository if it doesn't exist
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud artifacts repositories create stream-watcher \
+          --repository-format=docker \
+          --location=us-central1 \
+          --description="Stream Watcher repository for UI and proxy images" || true
+
   # 1. Install all dependencies
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install', '--legacy-peer-deps']
