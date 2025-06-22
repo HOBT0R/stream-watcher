@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running pre-commit checks..."
+
+# 1. Check types for the entire project
+echo "Running type-check..."
+npm run type-check
+if [ $? -ne 0 ]; then
+    echo "Type-check failed. Please fix the errors before committing."
+    exit 1
+fi
+
+# 2. Run all tests
+echo "Running tests..."
+npm run test
+if [ $? -ne 0 ]; then
+    echo "Tests failed. Please fix the errors before committing."
+    exit 1
+fi
+
+# 3. Run the linter on staged files
+echo "Running linter on staged files..."
+npm run lint:staged
+if [ $? -ne 0 ]; then
+    echo "Linting failed. Please fix the errors before committing."
+    exit 1
+fi
+
+echo "All checks passed!" 
