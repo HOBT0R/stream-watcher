@@ -201,6 +201,50 @@ For local development, the application uses the **Firebase Auth Emulator**, whic
 - `npm run test` - Run tests
 - `npm run lint` - Run linter
 
+## Environment Configuration
+
+The application's configuration is managed differently for the **UI (Frontend)** and the **Proxy (Backend)**, based on when and how the variables are needed.
+
+### Configuration Strategy: Build-Time vs. Run-Time
+
+A key concept is the difference between variables needed at **build-time** versus **run-time**.
+
+*   **Build-Time (UI):** These variables (prefixed with `VITE_`) are used only during the `npm run build` process to generate the static JavaScript files. Their values are embedded directly into the UI code. In production, these are supplied by the `FIREBASE_BUILD_ENV` secret.
+
+*   **Run-Time (Proxy):** These variables are read by the Node.js server *after* it has been deployed and is running. They are not baked into the code. In production, these are supplied by the Cloud Run environment itself (via `--set-env-vars` and `--set-secrets` in `cloudbuild.yaml`).
+
+This is why a variable like the Firebase Project ID appears in two forms: `VITE_FIREBASE_PROJECT_ID` for the UI build, and `FIREBASE_PROJECT_ID` for the proxy's runtime.
+
+### UI (Vite Frontend) - Build-Time Configuration
+
+The UI configuration is primarily concerned with connecting to Firebase services, either real or emulated.
+
+| Variable | Local (`.env`) | Docker (`ui.env.docker`) | Production (Cloud Build) |
+|---|---|---|---|
+| `VITE_USE_AUTH_EMULATOR` | **Required.** Set to `true` to use the local Firebase Emulator. | **Required.** Set to `true` to connect to the `auth-emulator` service. | Not applicable. |
+| `VITE_SKIP_LOGIN` | Optional. Set to `true` to bypass the login page for rapid UI development. | Not typically used. | Not applicable. |
+| `VITE_FIREBASE_EMULATOR_HOST` | **Required** (if emulator is `true`). URL of the local auth emulator (e.g., `127.0.0.1:9099`). | **Required.** Set to `auth-emulator:9099` to connect to the Docker service. | Not applicable. |
+| `VITE_FIREBASE_PROJECT_ID` | **Required.** Defines the Firebase project ID. | Sourced from `Dockerfile` fallback. Not set in `ui.env.docker`. | **Required.** Sourced from `FIREBASE_BUILD_ENV` secret. |
+| `VITE_FIREBASE_API_KEY` | **Required.** Defines the Firebase API Key. | Sourced from `Dockerfile` fallback. Not set in `ui.env.docker`. | **Required.** Sourced from `FIREBASE_BUILD_ENV` secret. |
+| `VITE_FIREBASE_AUTH_DOMAIN`| **Required.** Defines the Firebase Auth Domain. | Sourced from `Dockerfile` fallback. Not set in `ui.env.docker`. | **Required.** Sourced from `FIREBASE_BUILD_ENV` secret. |
+| `VITE_FIREBASE_STORAGE_BUCKET`| **Required.** Defines the Firebase Storage Bucket. | Sourced from `Dockerfile` fallback. Not set in `ui.env.docker`. | **Required.** Sourced from `FIREBASE_BUILD_ENV` secret. |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID`| **Required.** Defines the Firebase Messaging Sender ID. | Sourced from `Dockerfile` fallback. Not set in `ui.env.docker`. | **Required.** Sourced from `FIREBASE_BUILD_ENV` secret. |
+| `VITE_FIREBASE_APP_ID`| **Required.** Defines the Firebase App ID. | Sourced from `Dockerfile` fallback. Not set in `ui.env.docker`. | **Required.** Sourced from `FIREBASE_BUILD_ENV` secret. |
+
+### Proxy (Node.js Backend) - Run-Time Configuration
+
+The proxy configuration manages server behavior, authentication, and connection to the downstream BFF service. These variables are read from the environment when the server starts.
+
+| Variable | Local (`.env`) | Docker (`proxy.env.docker`) | Production (Cloud Run) |
+|---|---|---|---|
+| `PORT` | Optional. Defaults to `8080`. | Optional. Defaults to `8080`. | **Required.** Set by the Cloud Run environment to `8080`. |
+| `BFF_BASE_URL` & `BFF_API_KEY` | Optional. Defaults to values suitable for local development. | **Required.** Defines the URL and API key for the BFF service. | **Required.** Injected as a single `APP_CONFIG_JSON` secret from Google Secret Manager at runtime. |
+| `SKIP_JWT_VERIFY` | Optional. Set to `true` to disable auth checks. | Optional. Set to `true` to disable auth checks. | Not used. Defaults to `false` (verification is always enabled). |
+| `JWT_JWKS_URI` | **Required** (if JWT verification is enabled). | **Required** (if JWT verification is enabled). | **Required.** Sourced from the `cloudbuild.yaml` deployment step. |
+| `JWT_ISSUER` | **Required** (if JWT verification is enabled). | **Required** (if JWT verification is enabled). | **Required.** Sourced from the `cloudbuild.yaml` deployment step. |
+| `JWT_AUDIENCE` | **Required** (if JWT verification is enabled). | **Required** (if JWT verification is enabled). | **Required.** Sourced from the `cloudbuild.yaml` deployment step. |
+| `FIREBASE_PROJECT_ID` | **Required** (if JWT verification is enabled). | **Required** (if JWT verification is enabled). | **Required.** Sourced from the `cloudbuild.yaml` deployment step. |
+
 ## Configuration
 
 ### Proxy Server (Back-End)

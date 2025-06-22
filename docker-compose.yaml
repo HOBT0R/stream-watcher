@@ -9,8 +9,8 @@ services:
       auth-emulator:
         condition: service_healthy
     env_file:
-      - ui.env.docker
-      - packages/proxy/proxy.env.docker
+      - .env.docker
+      - packages/proxy/.env.docker
     volumes:
       - ./packages/proxy/dev_public.pem:/secrets/jwt_pub.pem:ro
     environment:

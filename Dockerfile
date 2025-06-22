@@ -2,14 +2,18 @@
 FROM node:20-alpine AS ui-builder
 WORKDIR /app
 
-# Accept the environment file content as a build argument. It will be empty for local builds.
+# Accept the environment file content from a secret for production builds.
 ARG FIREBASE_BUILD_ENV
+# Accept the Project ID from the Cloud Build environment. This is used for the UI build
+# to ensure the client-side code knows which Firebase project to connect to.
+ARG VITE_FIREBASE_PROJECT_ID
 
 # Check if FIREBASE_BUILD_ENV is provided. If so, use it to create .env.
 # Otherwise, create a fallback .env file for local Docker development.
 RUN if [ -n "$FIREBASE_BUILD_ENV" ]; then \
       echo "Using FIREBASE_BUILD_ENV from build-arg" && \
-      echo "$FIREBASE_BUILD_ENV" > .env; \
+      echo "$FIREBASE_BUILD_ENV" > .env && \
+      echo "VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID" >> .env; \
     else \
       echo "FIREBASE_BUILD_ENV not provided, creating default .env for local Docker" && \
       echo "VITE_USE_AUTH_EMULATOR=true" > .env && \
