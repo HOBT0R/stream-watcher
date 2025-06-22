@@ -31,8 +31,6 @@ steps:
         docker build \
           --tag 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA' \
           --build-arg FIREBASE_BUILD_ENV="$$FIREBASE_BUILD_ENV" \
-          # Pass the Project ID as a build-time argument for the UI.
-          # This bakes the variable into the static client-side code.
           --build-arg VITE_FIREBASE_PROJECT_ID=$PROJECT_ID \
           .
     secretEnv:
