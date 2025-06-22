@@ -1,6 +1,6 @@
 import '../test-setup.ts';
 
-import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll, Mock } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, clearJwksClient } from './auth.js';
 import * as config from '../config.js';
@@ -136,7 +136,7 @@ describe('Auth Middleware (verifyToken)', () => {
         // In certain Node versions jose may perform an extra network call that fails DNS
         // resolution before MSW can intercept, which results in a 401. We only assert the
         // middleware returns a 401 status in that scenario.
-        if ((mockResponse.status as jest.Mock)?.mock.calls.length) {
+        if (((mockResponse.status as Mock).mock.calls.length)) {
             expect(mockResponse.status).toHaveBeenCalledWith(401);
         } else {
             // Happy-path when DNS lookup does not fail

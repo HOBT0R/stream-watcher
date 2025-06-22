@@ -10,7 +10,7 @@ vi.mock('dotenv/config', () => ({}));
 
 // Mock the auth middleware
 vi.mock('./middleware/auth.js', () => ({
-    verifyToken: (req: Request, res: Response, next: NextFunction) => {
+    verifyToken: (_req: Request, _res: Response, next: NextFunction) => {
         // For testing, just call next() to simulate successful auth
         next();
     },
