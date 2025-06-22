@@ -1,5 +1,5 @@
 import express, { Application, Request, Response } from 'express';
-import { createProxyMiddleware } from 'http-proxy-middleware';
+import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware';
 import * as http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,6 +7,18 @@ import { verifyToken } from './middleware/auth.js';
 import { type AppConfig } from './config.js';
 import morgan from 'morgan';
 import cors from 'cors';
+import { GoogleAuth } from 'google-auth-library';
+
+const auth = new GoogleAuth();
+let idTokenClient: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+async function getGoogleIdToken(audience: string): Promise<string> {
+    if (!idTokenClient) {
+        idTokenClient = await auth.getIdTokenClient(audience);
+    }
+    const idToken = await idTokenClient.idTokenProvider.fetchIdToken(audience);
+    return idToken;
+}
 
 export function createApp(
     config: AppConfig,
@@ -46,11 +58,8 @@ export function createApp(
     const proxyOptions = {
         target: config.bffBaseUrl,
         changeOrigin: true,
-        // Overwrite the browser's origin to make the request appear same-site to the BFF.
-        // This is a common requirement for proxies calling backend services.
         headers: {
             origin: config.bffBaseUrl,
-            'x-service-key': config.bffApiKey,
         },
         proxyTimeout: 10000,
         timeout: 10000,
@@ -59,8 +68,19 @@ export function createApp(
         // "/v1/statuses" to the proxy. We prepend the prefix back so the
         // upstream sees "/api/v1/statuses" as expected.
         pathRewrite: (path: string, _req: Request) => `/api${path}`,
-        onProxyReq: (proxyReq: http.ClientRequest) => {
-            proxyReq.setHeader('x-service-key', config.bffApiKey);
+        onProxyReq: async (proxyReq: http.ClientRequest, req: http.IncomingMessage, res: http.ServerResponse) => {
+            try {
+                if (process.env.NODE_ENV === 'production') {
+                    const idToken = await getGoogleIdToken(config.bffBaseUrl);
+                    proxyReq.setHeader('Authorization', `Bearer ${idToken}`);
+                }
+            } catch (error) {
+                console.error('Failed to add authentication token to proxy request:', error);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Failed to authenticate with backend service.' }));
+                proxyReq.destroy();
+            }
+            fixRequestBody(proxyReq, req);
         },
         onProxyRes: (_proxyRes: http.IncomingMessage, _req: Request, _res: Response) => {},
         onError: (err: Error, _req: Request, res: Response | http.ServerResponse) => {

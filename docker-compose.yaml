@@ -16,7 +16,7 @@ services:
     environment:
       NODE_ENV: production
       JWT_PUBLIC_KEY: file:///secrets/jwt_pub.pem
-      JWT_JWKS_URL: ""
+      JWT_JWKS_URI: ""
       DEBUG: http-proxy-middleware:*
     restart: unless-stopped
   auth-emulator:

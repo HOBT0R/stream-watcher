@@ -17,7 +17,7 @@ RUN if [ -n "$FIREBASE_BUILD_ENV" ]; then \
     else \
       echo "FIREBASE_BUILD_ENV not provided, creating default .env for local Docker" && \
       echo "VITE_USE_AUTH_EMULATOR=true" > .env && \
-      echo "VITE_FIREBASE_EMULATOR_HOST=auth-emulator:9099" >> .env && \
+      echo "VITE_FIREBASE_EMULATOR_HOST=localhost:9099" >> .env && \
       echo "VITE_FIREBASE_API_KEY=emulator" >> .env && \
       echo "VITE_FIREBASE_PROJECT_ID=stream-watcher-dev" >> .env && \
       echo "VITE_FIREBASE_AUTH_DOMAIN=stream-watcher.firebaseapp.com" >> .env && \

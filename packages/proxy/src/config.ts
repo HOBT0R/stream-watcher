@@ -3,7 +3,6 @@ import 'dotenv/config';
 export interface AppConfig {
     port: number;
     bffBaseUrl: string;
-    bffApiKey: string;
     jwt: {
         skipVerification?: boolean;
         publicKey?: string;
@@ -20,7 +19,6 @@ export interface AppConfig {
 const config: AppConfig = {
     port: 8080,
     bffBaseUrl: 'http://localhost:3001',
-    bffApiKey: '',
     jwt: {
         skipVerification: false,
         publicKey: '',
@@ -37,11 +35,9 @@ const config: AppConfig = {
 if (process.env.APP_CONFIG_JSON) {
     const secretConfig = JSON.parse(process.env.APP_CONFIG_JSON);
     config.bffBaseUrl = secretConfig.cloudRunUrl;
-    config.bffApiKey = secretConfig.serviceApiKey;
 } else {
     // Fallback to environment variables for local development
     config.bffBaseUrl = process.env.BFF_BASE_URL || 'http://localhost:3001';
-    config.bffApiKey = process.env.BFF_API_KEY || '';
 }
 
 // Load all other configs from environment variables.

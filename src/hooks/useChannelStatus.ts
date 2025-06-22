@@ -12,6 +12,7 @@ export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?
     const lastPollTimeRef = useRef<Date | null>(null);
     const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const isPollingRef = useRef(false);
+    const mountedRef = useRef(true);
 
     // Memoize the fetch function to prevent unnecessary recreations
     const fetchChannelStatuses = useCallback(async () => {
@@ -42,13 +43,19 @@ export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?
         
         try {
             const updatedChannels = await channelService.getChannelStatuses(apiClient, channelNames);
-            setChannels(updatedChannels);
-            setError(null);
+            if (mountedRef.current) {
+                setChannels(updatedChannels);
+                setError(null);
+            }
         } catch (err) {
-            setError(err instanceof Error ? err : new Error('Failed to fetch channel statuses'));
+            if (mountedRef.current) {
+                setError(err instanceof Error ? err : new Error('Failed to fetch channel statuses'));
+            }
             console.error('Error fetching channel statuses:', err);
         } finally {
-            setIsLoading(false);
+            if (mountedRef.current) {
+                setIsLoading(false);
+            }
             isPollingRef.current = false;
         }
     }, [channelNames, pollingIntervalSeconds, apiClient]);
@@ -56,21 +63,25 @@ export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?
     const refreshChannel = async (channelName: string) => {
         try {
             const updatedChannel = await channelService.getChannelStatus(apiClient, channelName);
-            setChannels(prevChannels => 
-                prevChannels.map(c => 
-                    c.channelName === channelName ? updatedChannel : c
-                )
-            );
+            if (mountedRef.current) {
+                setChannels(prevChannels => 
+                    prevChannels.map(c => 
+                        c.channelName === channelName ? updatedChannel : c
+                    )
+                );
+            }
         } catch (err) {
             console.error(`Error refreshing channel ${channelName}:`, err);
             // Optionally, update the channel state to indicate an error
-            setChannels(prevChannels =>
-                prevChannels.map(c =>
-                    c.channelName === channelName 
-                        ? { ...c, status: 'unknown', lastUpdated: new Date().toISOString() } 
-                        : c
-                )
-            );
+            if (mountedRef.current) {
+                setChannels(prevChannels =>
+                    prevChannels.map(c =>
+                        c.channelName === channelName 
+                            ? { ...c, status: 'unknown', lastUpdated: new Date().toISOString() } 
+                            : c
+                    )
+                );
+            }
         }
     };
 
@@ -95,6 +106,9 @@ export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?
         );
         const intervalMs = intervalSeconds * 1000;
         
+        // Mark mounted
+        mountedRef.current = true;
+
         // Initial fetch
         fetchChannelStatuses();
 
@@ -105,6 +119,7 @@ export function useChannelStatus(channelNames: string[], pollingIntervalSeconds?
 
         // Cleanup function
         return () => {
+            mountedRef.current = false; // prevent state updates after unmount
             if (intervalIdRef.current) {
                 clearInterval(intervalIdRef.current);
                 intervalIdRef.current = null;
