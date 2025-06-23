@@ -6,8 +6,8 @@ const app = createApp(config);
 const server = http.createServer(app);
 
 server.listen(config.port, () => {
-    console.log(`Proxy server listening on port ${config.port}`);
-    console.log(`Proxying API requests to ${config.bffBaseUrl}`);
+    console.log(`[server]: Proxy is running at http://localhost:${config.port}`);
+    console.log(`[server]: Proxying to ${config.bffTargetUrl}`);
 });
 
 export default app; 
