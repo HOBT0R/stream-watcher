@@ -246,7 +246,8 @@ The proxy configuration manages server behavior, authentication, and connection 
 | Variable | Local (`.env`) | Docker (`proxy.env.docker`) | Production (Cloud Run) |
 |---|---|---|---|
 | `PORT` | Optional. Defaults to `8080`. | Optional. Defaults to `8080`. | **Required.** Set by the Cloud Run environment to `8080`. |
-| `BFF_BASE_URL` | Optional. Defaults to values suitable for local development. | **Required.** Defines the URL and API key for the BFF service. | **Required.** Injected as a single `APP_CONFIG_JSON` secret from Google Secret Manager at runtime. |
+| `BFF_TARGET_URL` | Optional. The URL of the downstream BFF service. Defaults to `http://localhost:3001`. | **Required.** Defines the URL for the BFF service. | **Required.** Injected from the `cloudRunUrl` property of the `APP_CONFIG_JSON` secret. |
+| `BFF_AUDIENCE` | Optional. The audience for the ID token. Defaults to the `BFF_TARGET_URL`. | **Required.** The audience for the ID token. | **Required.** Injected from the `cloudRunUrl` property of the `APP_CONFIG_JSON` secret. |
 | `SKIP_JWT_VERIFY` | Optional. Set to `true` to disable auth checks. | Optional. Set to `true` to disable auth checks. | Not used. Defaults to `false` (verification is always enabled). |
 | `JWT_JWKS_URI` | **Required** (if JWT verification is enabled). | **Required** (if JWT verification is enabled). | **Required.** Sourced from the `cloudbuild.yaml` deployment step. |
 | `JWT_ISSUER` | **Required** (if JWT verification is enabled). | **Required** (if JWT verification is enabled). | **Required.** Sourced from the `cloudbuild.yaml` deployment step. |

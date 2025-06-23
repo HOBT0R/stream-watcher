@@ -61,6 +61,8 @@ steps:
       - '--set-env-vars'
       - >-
         FIREBASE_PROJECT_ID=$PROJECT_ID,
+        BFF_TARGET_URL=https://twitchservice-230964387213.us-central1.run.app,
+        BFF_AUDIENCE=https://twitchservice-230964387213.us-central1.run.app,
         JWT_ISSUER=https://securetoken.google.com/$PROJECT_ID,
         JWT_AUDIENCE=$PROJECT_ID,
         JWT_JWKS_URI=https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com

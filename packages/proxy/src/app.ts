@@ -13,6 +13,8 @@ const auth = new GoogleAuth();
 let idTokenClient: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 async function getGoogleIdToken(audience: string): Promise<string> {
+    // Debug: log the audience we are about to use when requesting a token
+    console.log('[Auth] Generating Google ID token with audience:', audience);
     if (!idTokenClient) {
         idTokenClient = await auth.getIdTokenClient(audience);
     }
@@ -55,46 +57,43 @@ export function createApp(
 
     app.use('/api', verifyToken);
 
+    // Middleware to add Google-signed ID token before the request is proxied
+    app.use('/api', async (req, res, next) => {
+        try {
+            if (process.env.NODE_ENV === 'production') {
+                const idToken = await getGoogleIdToken(config.bffAudience);
+                // Express/Node normalises header names to lowercase
+                req.headers.authorization = `Bearer ${idToken}`;
+            }
+            next();
+        } catch (error) {
+            console.error('Failed to add authentication token to proxy request:', error);
+            res.status(500).json({ error: 'Failed to authenticate with backend service.' });
+        }
+    });
+
     const proxyOptions = {
-        target: config.bffBaseUrl,
+        target: config.bffTargetUrl,
         changeOrigin: true,
         headers: {
-            origin: config.bffBaseUrl,
+            origin: config.bffTargetUrl,
         },
         proxyTimeout: 10000,
         timeout: 10000,
         // Ensure BFF receives the original /api prefix that Express strips.
-        // If the incoming request is /api/v1/statuses, Express forwards
-        // "/v1/statuses" to the proxy. We prepend the prefix back so the
-        // upstream sees "/api/v1/statuses" as expected.
         pathRewrite: (path: string, _req: Request) => `/api${path}`,
-        onProxyReq: async (proxyReq: http.ClientRequest, req: http.IncomingMessage, res: http.ServerResponse) => {
-            try {
-                if (process.env.NODE_ENV === 'production') {
-                    const idToken = await getGoogleIdToken(config.bffBaseUrl);
-                    proxyReq.setHeader('Authorization', `Bearer ${idToken}`);
-                }
-            } catch (error) {
-                console.error('Failed to add authentication token to proxy request:', error);
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Failed to authenticate with backend service.' }));
-                proxyReq.destroy();
-            }
+        // Keep body fixing for non-GET requests (sync)
+        onProxyReq: (proxyReq: http.ClientRequest, req: http.IncomingMessage) => {
             fixRequestBody(proxyReq, req);
         },
-        onProxyRes: (_proxyRes: http.IncomingMessage, _req: Request, _res: Response) => {},
         onError: (err: Error, _req: Request, res: Response | http.ServerResponse) => {
             console.error('Proxy error:', err);
             if (!res.headersSent) {
                 if ('status' in res) {
-                    // This is an Express Response object
-                    res.status(502).json({ error: 'Bad Gateway - Upstream Error' });
+                    (res as Response).status(502).json({ error: 'Bad Gateway - Upstream Error' });
                 } else {
-                    // This is an http.ServerResponse object
-                    res.writeHead(502, { 'Content-Type': 'application/json' });
-                    res.end(
-                        JSON.stringify({ error: 'Bad Gateway - Upstream Error' })
-                    );
+                    (res as http.ServerResponse).writeHead(502, { 'Content-Type': 'application/json' });
+                    (res as http.ServerResponse).end(JSON.stringify({ error: 'Bad Gateway - Upstream Error' }));
                 }
             }
         },
@@ -117,7 +116,8 @@ export function createApp(
         res.sendFile('index.html', { root: uiDistPath });
     });
 
-    console.log('[Config] target =', config.bffBaseUrl);
+    console.log('[Config] targetUrl =', config.bffTargetUrl);
+    console.log('[Config] audience =', config.bffAudience);
 
     return app;
 } 
