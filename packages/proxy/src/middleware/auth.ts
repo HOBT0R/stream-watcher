@@ -61,11 +61,23 @@ export async function verifyToken(
 
   const token = authHeader.split(' ')[1];
 
+  // DEBUG — remove after test
+  try {
+    const payload = jose.decodeJwt(token);
+    const protectedHeader = jose.decodeProtectedHeader(token);
+    console.log('[JWT] header:', protectedHeader);
+    console.log('[JWT] payload:', payload);
+    console.log('[JWT] cfg:', config.jwt);
+  } catch (e) {
+    console.warn('[JWT] Could not decode token for logging, this may be expected for malformed tokens.');
+  }
+
   try {
     const key = await getVerificationKey();
     const { payload } = await jose.jwtVerify(
         token,
-        key as Parameters<typeof jose.jwtVerify>[1],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        key as any,
         {
             issuer: config.jwt.issuer,
             audience: config.jwt.audience,
@@ -79,7 +91,7 @@ export async function verifyToken(
     if (error instanceof Error) {
       errorMessage = `JWT Verification Error: ${error.message}`;
     }
-    console.error(errorMessage, error);
+    console.error('[JWT-ERR]', errorMessage, error);
     res.status(401).json({ error: errorMessage });
   }
 }
