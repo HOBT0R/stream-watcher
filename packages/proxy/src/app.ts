@@ -62,6 +62,10 @@ export function createApp(
         try {
             if (process.env.NODE_ENV === 'production') {
                 const idToken = await getGoogleIdToken(config.bffAudience);
+                // Debug: log the token before it is attached to the outgoing request
+                if (process.env.LOG_BFF_TOKEN === 'true') {
+                    console.log('[Auth → BFF] Outgoing Bearer token (pre-proxy):', idToken);
+                }
                 // Express/Node normalises header names to lowercase
                 req.headers.authorization = `Bearer ${idToken}`;
             }
@@ -84,6 +88,12 @@ export function createApp(
         pathRewrite: (path: string, _req: Request) => `/api${path}`,
         // Keep body fixing for non-GET requests (sync)
         onProxyReq: (proxyReq: http.ClientRequest, req: http.IncomingMessage) => {
+            // Debug: log the token that is actually sent to the BFF
+            if (process.env.LOG_BFF_TOKEN === 'true') {
+                const outboundAuth = proxyReq.getHeader('authorization');
+                console.log('[Proxy→BFF] Authorization header (post-proxy):', outboundAuth);
+            }
+
             fixRequestBody(proxyReq, req);
         },
         onError: (err: Error, _req: Request, res: Response | http.ServerResponse) => {

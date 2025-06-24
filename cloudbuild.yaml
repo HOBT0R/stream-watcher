@@ -65,7 +65,8 @@ steps:
         BFF_AUDIENCE=https://twitchservice-6jrv3su7zq-uc.a.run.app,
         JWT_ISSUER=https://securetoken.google.com/$PROJECT_ID,
         JWT_AUDIENCE=$PROJECT_ID,
-        JWT_JWKS_URI=https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com
+        JWT_xJxWKS_URI=https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com,
+        LOG_BFF_TOKEN=true
       - '--quiet'
 
 # Store the final image in the build results
