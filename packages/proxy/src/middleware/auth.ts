@@ -69,7 +69,7 @@ export async function verifyToken(
     console.log('[JWT] payload:', payload);
     console.log('[JWT] cfg:', config.jwt);
   } catch (e) {
-    console.warn('[JWT] Could not decode token for logging, this may be expected for malformed tokens.');
+    console.warn('[JWT] Could not decode token for logging, this may be expected for malformed tokens.', e);
   }
 
   try {
