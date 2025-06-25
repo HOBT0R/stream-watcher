@@ -87,23 +87,26 @@ export function createApp(
         timeout: 10000,
         // Ensure BFF receives the original /api prefix that Express strips.
         pathRewrite: (path: string, _req: Request) => `/api${path}`,
+        // http-proxy-middleware v3 uses the "on" option to hook into events
         // Keep body fixing for non-GET requests (sync)
-        onProxyReq: (proxyReq: http.ClientRequest, req: http.IncomingMessage) => {
-            // In production, ensure the Origin header is removed so the BFF
-            // doesn't reject the call with "Invalid CORS request".
-            if (process.env.NODE_ENV === 'production') {
-                proxyReq.removeHeader('origin');
-            }
+        on: {
+            proxyReq: (proxyReq: http.ClientRequest, req: http.IncomingMessage) => {
+                // In production, ensure the Origin header is removed so the BFF
+                // doesn't reject the call with "Invalid CORS request".
+                if (process.env.NODE_ENV === 'production') {
+                    proxyReq.removeHeader('origin');
+                }
 
-            // Debug: log the token and final Origin header
-            if (process.env.LOG_BFF_TOKEN === 'true') {
-                const outboundAuth = proxyReq.getHeader('authorization');
-                const outboundOrigin = proxyReq.getHeader('origin');
-                console.log('[Proxy→BFF] Authorization header (post-proxy):', outboundAuth);
-                console.log('[Proxy→BFF] Origin header (post-proxy):', outboundOrigin);
-            }
+                // Debug: log the token and final Origin header
+                if (process.env.LOG_BFF_TOKEN === 'true') {
+                    const outboundAuth = proxyReq.getHeader('authorization');
+                    const outboundOrigin = proxyReq.getHeader('origin');
+                    console.log('[Proxy→BFF] Authorization header (post-proxy):', outboundAuth);
+                    console.log('[Proxy→BFF] Origin header (post-proxy):', outboundOrigin);
+                }
 
-            fixRequestBody(proxyReq, req);
+                fixRequestBody(proxyReq, req);
+            },
         },
         onError: (err: Error, _req: Request, res: Response | http.ServerResponse) => {
             console.error('Proxy error:', err);
