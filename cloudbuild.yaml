@@ -60,6 +60,7 @@ steps:
       # These are used by the running Node.js process, not the UI build.
       - '--set-env-vars'
       - >-
+        NODE_ENV=production,
         FIREBASE_PROJECT_ID=$PROJECT_ID,
         BFF_TARGET_URL=https://twitchservice-6jrv3su7zq-uc.a.run.app,
         BFF_AUDIENCE=https://twitchservice-6jrv3su7zq-uc.a.run.app,

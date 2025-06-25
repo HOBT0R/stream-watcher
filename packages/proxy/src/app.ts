@@ -79,19 +79,28 @@ export function createApp(
     const proxyOptions = {
         target: config.bffTargetUrl,
         changeOrigin: true,
-        headers: {
-            origin: config.bffTargetUrl,
-        },
+        // Do NOT set a static Origin header in production. Setting an Origin that
+        // the BFF does not allow triggers a CORS 403. For local development we
+        // still spoof the Origin so that the BFF treats the request as same-site.
+        headers: process.env.NODE_ENV !== 'production' ? { origin: config.bffTargetUrl } : undefined,
         proxyTimeout: 10000,
         timeout: 10000,
         // Ensure BFF receives the original /api prefix that Express strips.
         pathRewrite: (path: string, _req: Request) => `/api${path}`,
         // Keep body fixing for non-GET requests (sync)
         onProxyReq: (proxyReq: http.ClientRequest, req: http.IncomingMessage) => {
-            // Debug: log the token that is actually sent to the BFF
+            // In production, ensure the Origin header is removed so the BFF
+            // doesn't reject the call with "Invalid CORS request".
+            if (process.env.NODE_ENV === 'production') {
+                proxyReq.removeHeader('origin');
+            }
+
+            // Debug: log the token and final Origin header
             if (process.env.LOG_BFF_TOKEN === 'true') {
                 const outboundAuth = proxyReq.getHeader('authorization');
+                const outboundOrigin = proxyReq.getHeader('origin');
                 console.log('[Proxy→BFF] Authorization header (post-proxy):', outboundAuth);
+                console.log('[Proxy→BFF] Origin header (post-proxy):', outboundOrigin);
             }
 
             fixRequestBody(proxyReq, req);
