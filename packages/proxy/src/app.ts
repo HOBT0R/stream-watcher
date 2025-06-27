@@ -1,81 +1,36 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
 import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware';
 import * as http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { verifyToken } from './middleware/auth.js';
+import { createAuthMiddleware } from './auth/middleware.js';
+import { getUserTokenConfig } from './auth/user-token-verifier/config.js';
+import { getGoogleAuthConfig } from './auth/google/config.js';
 import { type AppConfig } from './config.js';
+import { UserTokenVerificationError } from './auth/user-token-verifier/errors.js';
+import { AuthenticationError } from './auth/types.js';
 import morgan from 'morgan';
 import cors from 'cors';
-import { GoogleAuth } from 'google-auth-library';
-
-const auth = new GoogleAuth();
-let idTokenClient: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-async function getGoogleIdToken(audience: string): Promise<string> {
-    // Debug: log the audience we are about to use when requesting a token
-    console.log('[Auth] Generating Google ID token with audience:', audience);
-    if (!idTokenClient) {
-        idTokenClient = await auth.getIdTokenClient(audience);
-    }
-    const idToken = await idTokenClient.idTokenProvider.fetchIdToken(audience);
-    return idToken;
-}
 
 export function createApp(
-    config: AppConfig,
-    jwksResponse?: Record<string, unknown>
+    config: AppConfig
 ): Application {
     const app = express();
 
-    app.use(cors());
-    app.use(morgan('dev'));
-    // Apply JSON body parsing *only* to non-proxied routes so the raw body
-    // remains intact for /api requests that are forwarded to the BFF.
-    // Anything registered after the proxy can still use req.body.
+    // ================================
+    // Constants & Configuration
+    // ================================
+    
+    // Auth configurations
+    const userTokenConfig = getUserTokenConfig();
+    const googleConfig = getGoogleAuthConfig();
+    const authMiddleware = createAuthMiddleware(
+        userTokenConfig,
+        googleConfig,
+        config.bffAudience
+    );
 
-    app.get('/healthz', (_req: Request, res: Response) => {
-        res.status(200).send('OK');
-    });
-
-    // JWKS endpoint for testing
-    app.get('/.well-known/jwks.json', (_req: Request, res: Response) => {
-        const defaultJwks = {
-            keys: [
-                {
-                    kty: 'RSA',
-                    use: 'sig',
-                    kid: 'test-kid',
-                    alg: 'RS256',
-                    n: 'mock-n-value',
-                    e: 'AQAB'
-                }
-            ]
-        };
-        res.json(jwksResponse || defaultJwks);
-    });
-
-    app.use('/api', verifyToken);
-
-    // Middleware to add Google-signed ID token before the request is proxied
-    app.use('/api', async (req, res, next) => {
-        try {
-            if (process.env.NODE_ENV === 'production') {
-                const idToken = await getGoogleIdToken(config.bffAudience);
-                // Debug: log the token before it is attached to the outgoing request
-                if (process.env.LOG_BFF_TOKEN === 'true') {
-                    console.log('[Auth → BFF] Outgoing Bearer token (pre-proxy):', idToken);
-                }
-                // Express/Node normalises header names to lowercase
-                req.headers.authorization = `Bearer ${idToken}`;
-            }
-            next();
-        } catch (error) {
-            console.error('Failed to add authentication token to proxy request:', error);
-            res.status(500).json({ error: 'Failed to authenticate with backend service.' });
-        }
-    });
-
+    // Proxy configuration
     const proxyOptions = {
         target: config.bffTargetUrl,
         changeOrigin: true,
@@ -121,21 +76,78 @@ export function createApp(
         },
     };
 
-    app.use('/api', createProxyMiddleware(proxyOptions));
-
-    // JSON parsing for all subsequent routes (non-proxied)
-    app.use(express.json());
-
-    // Serve the pre-built React UI once API routes are registered
+    // Static file serving paths
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     const uiDistPath = path.join(__dirname, '..', '..', '..', 'dist');
 
+    // ================================
+    // Middleware Registration
+    // ================================
+
+    // Global middleware
+    app.use(cors());
+    app.use(morgan('combined')); // Standard Apache combined log format
+    
+    // Health check endpoint
+    app.get('/healthz', (_req: Request, res: Response) => {
+        res.status(200).send('OK');
+    });
+
+    // API routes (auth + proxy)
+    app.use('/api', authMiddleware);
+    app.use('/api', createProxyMiddleware(proxyOptions));
+
+    // Static file serving
     app.use(express.static(uiDistPath));
 
     // SPA fallback
     app.get('*', (_req, res) => {
         res.sendFile('index.html', { root: uiDistPath });
+    });
+
+    // ================================
+    // Global Error Handler
+    // ================================
+    app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
+        console.error('[Global Error Handler]', error.message, error);
+
+        // Handle authentication errors
+        if (error instanceof UserTokenVerificationError || error instanceof AuthenticationError) {
+            const isExpired = (error as any).isExpired === true;
+            
+            return res.status(401).json({
+                error: {
+                    type: error.name,
+                    message: error.message,
+                    code: isExpired ? 'TOKEN_EXPIRED' : 'AUTH_FAILED',
+                    timestamp: new Date().toISOString(),
+                    // Add a specific flag for expired tokens to trigger logout on frontend
+                    requiresLogout: isExpired
+                }
+            });
+        }
+
+        // Handle other known errors
+        if ('statusCode' in error && typeof error.statusCode === 'number') {
+            return res.status(error.statusCode).json({
+                error: {
+                    type: error.name,
+                    message: error.message,
+                    timestamp: new Date().toISOString()
+                }
+            });
+        }
+
+        // Fallback for unknown errors
+        res.status(500).json({
+            error: {
+                type: 'InternalServerError',
+                message: 'An unexpected error occurred',
+                code: 'INTERNAL_ERROR',
+                timestamp: new Date().toISOString()
+            }
+        });
     });
 
     console.log('[Config] targetUrl =', config.bffTargetUrl);
