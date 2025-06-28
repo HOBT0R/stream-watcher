@@ -7,7 +7,12 @@ export class UserTokenVerifier {
   private jwksClient?: ReturnType<typeof jose.createRemoteJWKSet>;
   private cachedPublicKey?: jose.KeyLike;
 
-  constructor(private config: UserTokenConfig) {}
+  constructor(private config: UserTokenConfig) {
+    // Validate configuration for production mode
+    if (!config.skipVerification && !config.publicKey && !config.jwksUri) {
+      throw new UserTokenConfigurationError('Either publicKey or jwksUri must be provided when skipVerification is false');
+    }
+  }
 
   async verify(token: string): Promise<UserTokenPayload> {
     if (this.config.skipVerification) {
@@ -43,30 +48,16 @@ export class UserTokenVerifier {
 
       return { sub: payload.sub! } as UserTokenPayload;
     } catch (error) {
-      // Re-throw configuration errors without wrapping
-      if (error instanceof UserTokenConfigurationError) {
-        console.error('[JWT-ERR]', error.message, error);
-        throw error;
+      // Handle expired token specifically
+      if (error instanceof jose.errors.JWTExpired) {
+        const expiredError = new UserTokenVerificationError('Token has expired');
+        (expiredError as UserTokenVerificationError & { isExpired: boolean }).isExpired = true;
+        throw expiredError;
       }
       
-      // Check if this is specifically a JWT expiration error
-      const isExpiredToken = error instanceof Error && 
-        (error.name === 'JWTExpired' || 
-         error.message.toLowerCase().includes('expired') ||
-         error.message.toLowerCase().includes('exp'));
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown verification error';
-      console.error('[JWT-ERR]', errorMessage, error);
-      
-      // Create a more specific error for expired tokens
-      const verificationError = new UserTokenVerificationError(errorMessage, error instanceof Error ? error : undefined);
-      
-      // Add a flag to indicate this is an expired token for client-side handling
-      if (isExpiredToken) {
-        (verificationError as any).isExpired = true;
-      }
-      
-      throw verificationError;
+      throw new UserTokenVerificationError(
+        `JWT verification failed: ${(error as Error).message}`
+      );
     }
   }
 

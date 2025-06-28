@@ -4,7 +4,7 @@ import { Application, Request, Response, NextFunction } from 'express';
 import http from 'http';
 import { GoogleAuth } from 'google-auth-library';
 import { type AppConfig } from './config.js';
-import { buildUnsignedJwt, decodeJwt } from './test-helpers/jwtHelpers.js';
+import { buildUnsignedJwt } from './test-helpers/jwtHelpers.js';
 
 // Mock dotenv to prevent it from loading .env files
 vi.mock('dotenv/config', () => ({}));
