@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { InternalAxiosRequestConfig } from 'axios';
 import { API } from '../../constants/config';
 import { auth } from '../../firebase';
+import { signOut } from 'firebase/auth';
 
 // Use explicit API base URL during development so the Vite dev server can
 // proxy or hit the BFF directly. For the built/released app (production),
@@ -55,9 +56,44 @@ apiClient.interceptors.response.use(
         // Log errors in development
         if (import.meta.env.DEV) {
             console.error('API Error:', {
-                    url: error.config?.url,
+                url: error.config?.url,
                 status: error.response?.status,
                 message: error.message
+            });
+        }
+
+        // Handle token expiration specifically
+        if (error.response?.status === 401) {
+            const errorData = error.response.data?.error;
+            
+            // Check if this is a TOKEN_EXPIRED error or has requiresLogout flag
+            if (errorData?.code === 'TOKEN_EXPIRED' || errorData?.requiresLogout === true) {
+                console.warn('Token expired, automatically logging out user');
+                
+                try {
+                    // Trigger logout to clear the expired token and redirect to login
+                    await signOut(auth);
+                    
+                    // Optionally redirect to login page if not already there
+                    if (window.location.pathname !== '/login') {
+                        window.location.href = '/login?reason=token_expired';
+                    }
+                } catch (logoutError) {
+                    console.error('Error during automatic logout:', logoutError);
+                }
+                
+                // Return a specific error for expired tokens
+                return Promise.reject({
+                    message: 'Your session has expired. Please log in again.',
+                    code: 'TOKEN_EXPIRED',
+                    requiresLogout: true
+                });
+            }
+            
+            // Handle other 401 errors (invalid credentials, etc.)
+            return Promise.reject({
+                message: 'Authentication failed',
+                details: error.response.data
             });
         }
 
@@ -88,4 +124,6 @@ apiClient.interceptors.response.use(
             details: error.response.data
         });
     }
-); 
+);
+
+export default apiClient; 

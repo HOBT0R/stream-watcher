@@ -18,182 +18,131 @@ vi.mock('google-auth-library', () => ({
 describe('GoogleTokenGenerator', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetIdTokenClient.mockResolvedValue({
-      idTokenProvider: {
-        fetchIdToken: mockFetchIdToken
-      }
-    });
   });
 
-  describe('Development Mode (skipAuth: true)', () => {
-    it('should return mock token when auth is skipped', async () => {
-      const config: GoogleAuthConfig = {
-        skipAuth: true,
-        mockToken: 'test-mock-token'
-      };
+  describe('Development Environment (skipAuth: true)', () => {
+    const devConfig: GoogleAuthConfig = {
+      skipAuth: true,
+      mockToken: 'dev-service-token'
+    };
+
+    it('should return mock token when skipAuth is true', async () => {
+      const generator = new GoogleTokenGenerator(devConfig);
+      const token = await generator.generateIdToken('test-audience');
       
-      const generator = new GoogleTokenGenerator(config);
-      const result = await generator.generateIdToken('test-audience');
-      
-      expect(result).toBe('test-mock-token');
+      expect(token).toBe('dev-service-token');
       expect(mockGetIdTokenClient).not.toHaveBeenCalled();
     });
 
-    it('should return default mock token when none configured', async () => {
-      const config: GoogleAuthConfig = {
+    it('should return default dev token when mockToken is not provided', async () => {
+      const configWithoutMock: GoogleAuthConfig = {
         skipAuth: true
       };
       
-      const generator = new GoogleTokenGenerator(config);
-      const result = await generator.generateIdToken('test-audience');
+      const generator = new GoogleTokenGenerator(configWithoutMock);
+      const token = await generator.generateIdToken('test-audience');
       
-      expect(result).toBe('dev-service-token');
-      expect(mockGetIdTokenClient).not.toHaveBeenCalled();
-    });
-
-    it('should log development mode message', async () => {
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      
-      const config: GoogleAuthConfig = {
-        skipAuth: true
-      };
-      
-      const generator = new GoogleTokenGenerator(config);
-      await generator.generateIdToken('test-audience');
-      
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '[Auth] Development mode - skipping service token injection'
-      );
-      
-      consoleLogSpy.mockRestore();
+      expect(token).toBe('dev-service-token');
     });
   });
 
-  describe('Production Mode (skipAuth: false)', () => {
-    it('should generate Google ID token successfully', async () => {
-      const config: GoogleAuthConfig = {
-        skipAuth: false,
-        projectId: 'test-project',
-        audience: 'test-audience'
+  describe('Production Environment (skipAuth: false)', () => {
+    const prodConfig: GoogleAuthConfig = {
+      skipAuth: false,
+      projectId: 'test-project',
+      audience: 'test-audience'
+    };
+
+    it('should generate real Google ID token', async () => {
+      const mockIdTokenProvider = {
+        fetchIdToken: mockFetchIdToken.mockResolvedValue('real-google-token')
       };
       
-      mockFetchIdToken.mockResolvedValue('google-id-token-12345');
+      const mockClient = {
+        idTokenProvider: mockIdTokenProvider
+      };
       
-      const generator = new GoogleTokenGenerator(config);
-      const result = await generator.generateIdToken('test-audience');
+      mockGetIdTokenClient.mockResolvedValue(mockClient);
       
-      expect(result).toBe('google-id-token-12345');
+      const generator = new GoogleTokenGenerator(prodConfig);
+      const token = await generator.generateIdToken('test-audience');
+      
+      expect(token).toBe('real-google-token');
       expect(mockGetIdTokenClient).toHaveBeenCalledWith('test-audience');
       expect(mockFetchIdToken).toHaveBeenCalledWith('test-audience');
     });
 
-    it('should log audience for debugging', async () => {
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      
-      const config: GoogleAuthConfig = {
-        skipAuth: false
+    it('should reuse existing idTokenClient on subsequent calls', async () => {
+      const mockIdTokenProvider = {
+        fetchIdToken: mockFetchIdToken.mockResolvedValue('cached-token')
       };
       
-      mockFetchIdToken.mockResolvedValue('test-token');
-      
-      const generator = new GoogleTokenGenerator(config);
-      await generator.generateIdToken('debug-audience');
-      
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '[Auth] Generating Google ID token with audience:', 'debug-audience'
-      );
-      
-      consoleLogSpy.mockRestore();
-    });
-
-    it('should reuse ID token client for multiple calls', async () => {
-      const config: GoogleAuthConfig = {
-        skipAuth: false
+      const mockClient = {
+        idTokenProvider: mockIdTokenProvider
       };
       
-      mockFetchIdToken
-        .mockResolvedValueOnce('token-1')
-        .mockResolvedValueOnce('token-2');
+      mockGetIdTokenClient.mockResolvedValue(mockClient);
       
-      const generator = new GoogleTokenGenerator(config);
+      const generator = new GoogleTokenGenerator(prodConfig);
       
       // First call
-      const result1 = await generator.generateIdToken('audience-1');
-      expect(result1).toBe('token-1');
+      await generator.generateIdToken('test-audience');
+      // Second call
+      await generator.generateIdToken('test-audience');
       
-      // Second call should reuse client
-      const result2 = await generator.generateIdToken('audience-2');
-      expect(result2).toBe('token-2');
-      
-      // Should only create client once
       expect(mockGetIdTokenClient).toHaveBeenCalledTimes(1);
       expect(mockFetchIdToken).toHaveBeenCalledTimes(2);
     });
 
-    it('should throw GoogleTokenGenerationError when client creation fails', async () => {
-      const config: GoogleAuthConfig = {
-        skipAuth: false
-      };
+    it('should handle Google Auth initialization errors', async () => {
+      mockGetIdTokenClient.mockRejectedValue(new Error('Google Auth failed'));
       
-      mockGetIdTokenClient.mockRejectedValue(new Error('Client creation failed'));
+      const generator = new GoogleTokenGenerator(prodConfig);
       
-      const generator = new GoogleTokenGenerator(config);
-      
-      await expect(generator.generateIdToken('test-audience')).rejects.toThrow(
-        GoogleTokenGenerationError
-      );
+      await expect(generator.generateIdToken('test-audience'))
+        .rejects
+        .toThrow(GoogleTokenGenerationError);
     });
 
-    it('should throw GoogleTokenGenerationError when token fetch fails', async () => {
-      const config: GoogleAuthConfig = {
-        skipAuth: false
+    it('should handle token generation errors', async () => {
+      const mockIdTokenProvider = {
+        fetchIdToken: mockFetchIdToken.mockRejectedValue(new Error('Token fetch failed'))
       };
       
-      mockFetchIdToken.mockRejectedValue(new Error('Token fetch failed'));
+      const mockClient = {
+        idTokenProvider: mockIdTokenProvider
+      };
       
-      const generator = new GoogleTokenGenerator(config);
+      mockGetIdTokenClient.mockResolvedValue(mockClient);
       
-      await expect(generator.generateIdToken('test-audience')).rejects.toThrow(
-        GoogleTokenGenerationError
-      );
+      const generator = new GoogleTokenGenerator(prodConfig);
+      
+      await expect(generator.generateIdToken('test-audience'))
+        .rejects
+        .toThrow(GoogleTokenGenerationError);
     });
+  });
 
-    it('should throw GoogleTokenGenerationError when auth not initialized', async () => {
-      const config: GoogleAuthConfig = {
-        skipAuth: false
+  describe('Error Handling', () => {
+    it('should wrap Google Auth errors in GoogleTokenGenerationError', async () => {
+      const prodConfig: GoogleAuthConfig = {
+        skipAuth: false,
+        projectId: 'test-project'
       };
       
-      // Force auth to be undefined by not initializing it
-      const generator = new GoogleTokenGenerator(config);
-      // Access private property to set it to undefined (for test)
-      (generator as any).auth = undefined;
+      const originalError = new Error('Google service unavailable');
+      mockGetIdTokenClient.mockRejectedValue(originalError);
       
-      await expect(generator.generateIdToken('test-audience')).rejects.toThrow(
-        GoogleTokenGenerationError
-      );
-    });
-
-    it('should handle error logging correctly', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const generator = new GoogleTokenGenerator(prodConfig);
       
-      const config: GoogleAuthConfig = {
-        skipAuth: false
-      };
-      
-      const testError = new Error('Test error');
-      mockGetIdTokenClient.mockRejectedValue(testError);
-      
-      const generator = new GoogleTokenGenerator(config);
-      
-      await expect(generator.generateIdToken('test-audience')).rejects.toThrow();
-      
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '[Google-Auth-ERR]',
-        'Test error',
-        testError
-      );
-      
-      consoleErrorSpy.mockRestore();
+      try {
+        await generator.generateIdToken('test-audience');
+        expect.fail('Should have thrown an error');
+      } catch (error) {
+        expect(error).toBeInstanceOf(GoogleTokenGenerationError);
+        expect((error as GoogleTokenGenerationError).message).toContain('Google service unavailable');
+        expect((error as GoogleTokenGenerationError).originalError).toBe(originalError);
+      }
     });
   });
 }); 

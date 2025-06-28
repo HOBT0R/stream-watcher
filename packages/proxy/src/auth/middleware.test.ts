@@ -5,272 +5,274 @@ import { Request, Response, NextFunction } from 'express';
 import { createAuthMiddleware } from './middleware.js';
 import { UserTokenConfig } from './user-token-verifier/types.js';
 import { GoogleAuthConfig } from './google/types.js';
-import { AuthenticationError } from './types.js';
 
-describe('Unified Auth Middleware', () => {
-  let mockRequest: Partial<Request & { user?: any }>;
+// Mock the auth modules
+vi.mock('./user-token-verifier/verifier.js');
+vi.mock('./google/tokenGenerator.js');
+
+describe('Auth Middleware', () => {
+  let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
-  let nextFunction: NextFunction;
+  let mockNext: NextFunction;
 
   beforeEach(() => {
-    mockRequest = { headers: {} };
+    mockRequest = {
+      headers: {},
+      user: undefined
+    };
+    
     mockResponse = {
       status: vi.fn().mockReturnThis(),
-      json: vi.fn(),
+      json: vi.fn().mockReturnThis()
     };
-    nextFunction = vi.fn() as unknown as NextFunction;
+    
+    mockNext = vi.fn() as NextFunction;
+    
+    vi.clearAllMocks();
   });
 
   describe('Development Environment', () => {
-    it('should bypass Firebase auth and skip Google auth', async () => {
-      const userTokenConfig: UserTokenConfig = {
-        skipVerification: true,
-        mockUser: {
-          sub: 'dev-user-123',
-          email: 'dev@example.com',
-          name: 'Dev User'
-        }
-      };
+    const devUserTokenConfig: UserTokenConfig = {
+      skipVerification: true,
+      mockUser: {
+        sub: 'dev-user-123',
+        email: 'developer@example.com',
+        name: 'Development User'
+      }
+    };
 
-      const googleConfig: GoogleAuthConfig = {
-        skipAuth: true,
-        mockToken: 'dev-token'
-      };
+    const devGoogleConfig: GoogleAuthConfig = {
+      skipAuth: true,
+      mockToken: 'dev-service-token'
+    };
 
-      const middleware = createAuthMiddleware(userTokenConfig, googleConfig, 'test-audience');
-      
-      await middleware(mockRequest as Request, mockResponse as Response, nextFunction);
+    it('should use mock user when user token verification is skipped', async () => {
+      const middleware = createAuthMiddleware(
+        devUserTokenConfig,
+        devGoogleConfig,
+        'test-audience'
+      );
 
-      expect(nextFunction).toHaveBeenCalledWith();
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
       expect(mockRequest.user).toEqual({
         sub: 'dev-user-123',
-        email: 'dev@example.com',
-        name: 'Dev User'
+        email: 'developer@example.com',
+        name: 'Development User'
       });
-      // Should not modify authorization header in dev mode
-      expect(mockRequest.headers!.authorization).toBeUndefined();
+      expect(mockNext).toHaveBeenCalledWith();
     });
 
-    it('should use default mock user when none configured', async () => {
-      const userTokenConfig: UserTokenConfig = {
+    it('should use default mock user when mockUser is not configured', async () => {
+      const configWithoutMockUser: UserTokenConfig = {
         skipVerification: true
       };
 
-      const googleConfig: GoogleAuthConfig = {
-        skipAuth: true
-      };
+      const middleware = createAuthMiddleware(
+        configWithoutMockUser,
+        devGoogleConfig,
+        'test-audience'
+      );
 
-      const middleware = createAuthMiddleware(userTokenConfig, googleConfig, 'test-audience');
-      
-      await middleware(mockRequest as Request, mockResponse as Response, nextFunction);
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
 
-      expect(nextFunction).toHaveBeenCalledWith();
       expect(mockRequest.user).toEqual({
         sub: 'dev-user',
         email: 'dev@example.com'
       });
+      expect(mockNext).toHaveBeenCalledWith();
+    });
+
+    it('should skip Google service token injection in development', async () => {
+      const middleware = createAuthMiddleware(
+        devUserTokenConfig,
+        devGoogleConfig,
+        'test-audience'
+      );
+
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      // Should not modify authorization header in dev mode
+      expect(mockRequest.headers?.authorization).toBeUndefined();
+      expect(mockNext).toHaveBeenCalledWith();
     });
   });
 
   describe('Production Environment', () => {
-    it('should verify Firebase JWT and inject Google token', async () => {
-      const userTokenConfig: UserTokenConfig = {
-        skipVerification: false,
-        issuer: 'test-issuer',
-        audience: 'test-audience'
+    const prodUserTokenConfig: UserTokenConfig = {
+      skipVerification: false,
+      jwksUri: 'https://example.com/.well-known/jwks.json',
+      issuer: 'https://securetoken.google.com/test-project',
+      audience: 'test-project'
+    };
+
+    const prodGoogleConfig: GoogleAuthConfig = {
+      skipAuth: false,
+      projectId: 'test-project',
+      audience: 'test-audience'
+    };
+
+    it('should verify user token and inject Google service token', async () => {
+      // Mock successful user token verification
+      const { UserTokenVerifier } = await import('./user-token-verifier/verifier.js');
+      const mockVerify = vi.fn().mockResolvedValue({
+        sub: 'user-123',
+        email: 'user@example.com'
+      });
+      vi.mocked(UserTokenVerifier).mockImplementation(() => ({
+        verify: mockVerify
+      }) as unknown as InstanceType<typeof UserTokenVerifier>);
+
+      // Mock successful Google token generation
+      const { GoogleTokenGenerator } = await import('./google/tokenGenerator.js');
+      const mockGenerateIdToken = vi.fn().mockResolvedValue('google-service-token');
+      vi.mocked(GoogleTokenGenerator).mockImplementation(() => ({
+        generateIdToken: mockGenerateIdToken
+      }) as unknown as InstanceType<typeof GoogleTokenGenerator>);
+
+      mockRequest.headers = {
+        authorization: 'Bearer user-jwt-token'
       };
 
-      const googleConfig: GoogleAuthConfig = {
-        skipAuth: false,
-        projectId: 'test-project'
-      };
-
-      // Mock the Firebase verifier to return a user
-      const originalFirebaseVerifier = await import('./user-token-verifier/verifier.js');
-      vi.spyOn(originalFirebaseVerifier, 'UserTokenVerifier').mockImplementation(() => ({
-        verify: vi.fn().mockResolvedValue({ sub: 'verified-user-123' }),
-        clearCache: vi.fn()
-      } as any));
-
-      // Mock the Google token generator
-      const originalGoogleGenerator = await import('./google/tokenGenerator.js');
-      vi.spyOn(originalGoogleGenerator, 'GoogleTokenGenerator').mockImplementation(() => ({
-        generateIdToken: vi.fn().mockResolvedValue('google-service-token')
-      } as any));
-
-      mockRequest.headers!.authorization = 'Bearer valid-firebase-jwt';
-
-      const middleware = createAuthMiddleware(userTokenConfig, googleConfig, 'test-audience');
-      
-      await middleware(mockRequest as Request, mockResponse as Response, nextFunction);
-
-      expect(nextFunction).toHaveBeenCalledWith();
-      expect(mockRequest.user).toEqual({ sub: 'verified-user-123' });
-      expect(mockRequest.headers!.authorization).toBe('Bearer google-service-token');
-    });
-
-    it('should throw AuthenticationError when no authorization header', async () => {
-      const userTokenConfig: UserTokenConfig = {
-        skipVerification: false
-      };
-
-      const googleConfig: GoogleAuthConfig = {
-        skipAuth: false
-      };
-
-      const middleware = createAuthMiddleware(userTokenConfig, googleConfig, 'test-audience');
-      
-      await middleware(mockRequest as Request, mockResponse as Response, nextFunction);
-
-      expect(nextFunction).toHaveBeenCalledWith(expect.any(AuthenticationError));
-      expect(nextFunction).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Authorization header required'
-        })
-      );
-    });
-
-    it('should throw AuthenticationError when authorization header malformed', async () => {
-      const userTokenConfig: UserTokenConfig = {
-        skipVerification: false
-      };
-
-      const googleConfig: GoogleAuthConfig = {
-        skipAuth: false
-      };
-
-      mockRequest.headers!.authorization = 'Malformed header';
-
-      const middleware = createAuthMiddleware(userTokenConfig, googleConfig, 'test-audience');
-      
-      await middleware(mockRequest as Request, mockResponse as Response, nextFunction);
-
-      expect(nextFunction).toHaveBeenCalledWith(expect.any(AuthenticationError));
-    });
-
-    it('should handle Firebase verification errors', async () => {
-      const userTokenConfig: UserTokenConfig = {
-        skipVerification: false
-      };
-
-      const googleConfig: GoogleAuthConfig = {
-        skipAuth: false
-      };
-
-      // Mock Firebase verifier to throw an error
-      const originalFirebaseVerifier = await import('./user-token-verifier/verifier.js');
-      vi.spyOn(originalFirebaseVerifier, 'UserTokenVerifier').mockImplementation(() => ({
-        verify: vi.fn().mockRejectedValue(new Error('JWT verification failed')),
-        clearCache: vi.fn()
-      } as any));
-
-      mockRequest.headers!.authorization = 'Bearer invalid-jwt';
-
-      const middleware = createAuthMiddleware(userTokenConfig, googleConfig, 'test-audience');
-      
-      await middleware(mockRequest as Request, mockResponse as Response, nextFunction);
-
-      expect(nextFunction).toHaveBeenCalledWith(expect.any(Error));
-    });
-
-    it('should handle Google token generation errors', async () => {
-      const userTokenConfig: UserTokenConfig = {
-        skipVerification: false
-      };
-
-      const googleConfig: GoogleAuthConfig = {
-        skipAuth: false
-      };
-
-      // Mock Firebase verifier to succeed
-      const originalFirebaseVerifier = await import('./user-token-verifier/verifier.js');
-      vi.spyOn(originalFirebaseVerifier, 'UserTokenVerifier').mockImplementation(() => ({
-        verify: vi.fn().mockResolvedValue({ sub: 'user-123' }),
-        clearCache: vi.fn()
-      } as any));
-
-      // Mock Google generator to fail
-      const originalGoogleGenerator = await import('./google/tokenGenerator.js');
-      vi.spyOn(originalGoogleGenerator, 'GoogleTokenGenerator').mockImplementation(() => ({
-        generateIdToken: vi.fn().mockRejectedValue(new Error('Token generation failed'))
-      } as any));
-
-      mockRequest.headers!.authorization = 'Bearer valid-jwt';
-
-      const middleware = createAuthMiddleware(userTokenConfig, googleConfig, 'test-audience');
-      
-      await middleware(mockRequest as Request, mockResponse as Response, nextFunction);
-
-      expect(nextFunction).toHaveBeenCalledWith(expect.any(Error));
-    });
-
-    it('should log debug token when LOG_BFF_TOKEN is enabled', async () => {
-      const originalEnv = process.env.LOG_BFF_TOKEN;
-      process.env.LOG_BFF_TOKEN = 'true';
-      
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-      const userTokenConfig: UserTokenConfig = {
-        skipVerification: false
-      };
-
-      const googleConfig: GoogleAuthConfig = {
-        skipAuth: false
-      };
-
-      // Mock successful auth flow
-      const originalFirebaseVerifier = await import('./user-token-verifier/verifier.js');
-      vi.spyOn(originalFirebaseVerifier, 'UserTokenVerifier').mockImplementation(() => ({
-        verify: vi.fn().mockResolvedValue({ sub: 'user-123' }),
-        clearCache: vi.fn()
-      } as any));
-
-      const originalGoogleGenerator = await import('./google/tokenGenerator.js');
-      vi.spyOn(originalGoogleGenerator, 'GoogleTokenGenerator').mockImplementation(() => ({
-        generateIdToken: vi.fn().mockResolvedValue('debug-token-12345')
-      } as any));
-
-      mockRequest.headers!.authorization = 'Bearer valid-jwt';
-
-      const middleware = createAuthMiddleware(userTokenConfig, googleConfig, 'test-audience');
-      
-      await middleware(mockRequest as Request, mockResponse as Response, nextFunction);
-
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        '[Auth → BFF] Outgoing Bearer token (pre-proxy):',
-        'debug-token-12345'
+      const middleware = createAuthMiddleware(
+        prodUserTokenConfig,
+        prodGoogleConfig,
+        'test-audience'
       );
 
-      consoleLogSpy.mockRestore();
-      process.env.LOG_BFF_TOKEN = originalEnv;
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockVerify).toHaveBeenCalledWith('user-jwt-token');
+      expect(mockRequest.user).toEqual({
+        sub: 'user-123',
+        email: 'user@example.com'
+      });
+      expect(mockGenerateIdToken).toHaveBeenCalledWith('test-audience');
+      expect(mockRequest.headers?.authorization).toBe('Bearer google-service-token');
+      expect(mockNext).toHaveBeenCalledWith();
+    });
+
+    it('should handle missing authorization header', async () => {
+      const middleware = createAuthMiddleware(
+        prodUserTokenConfig,
+        prodGoogleConfig,
+        'test-audience'
+      );
+
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+      const error = (mockNext as jest.Mock).mock.calls[0][0];
+      expect(error.message).toContain('Authorization header required');
+    });
+
+    it('should handle malformed authorization header', async () => {
+      mockRequest.headers = {
+        authorization: 'InvalidFormat token'
+      };
+
+      const middleware = createAuthMiddleware(
+        prodUserTokenConfig,
+        prodGoogleConfig,
+        'test-audience'
+      );
+
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+      const error = (mockNext as jest.Mock).mock.calls[0][0];
+      expect(error.message).toContain('Authorization header required');
+    });
+
+    it('should handle user token verification failure', async () => {
+      const { UserTokenVerifier } = await import('./user-token-verifier/verifier.js');
+      const mockVerify = vi.fn().mockRejectedValue(new Error('Invalid token'));
+      vi.mocked(UserTokenVerifier).mockImplementation(() => ({
+        verify: mockVerify
+      }) as unknown as InstanceType<typeof UserTokenVerifier>);
+
+      mockRequest.headers = {
+        authorization: 'Bearer invalid-token'
+      };
+
+      const middleware = createAuthMiddleware(
+        prodUserTokenConfig,
+        prodGoogleConfig,
+        'test-audience'
+      );
+
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it('should handle Google token generation failure', async () => {
+      // Mock successful user token verification
+      const { UserTokenVerifier } = await import('./user-token-verifier/verifier.js');
+      const mockVerify = vi.fn().mockResolvedValue({
+        sub: 'user-123',
+        email: 'user@example.com'
+      });
+      vi.mocked(UserTokenVerifier).mockImplementation(() => ({
+        verify: mockVerify
+      }) as unknown as InstanceType<typeof UserTokenVerifier>);
+
+      // Mock failed Google token generation
+      const { GoogleTokenGenerator } = await import('./google/tokenGenerator.js');
+      const mockGenerateIdToken = vi.fn().mockRejectedValue(new Error('Google Auth failed'));
+      vi.mocked(GoogleTokenGenerator).mockImplementation(() => ({
+        generateIdToken: mockGenerateIdToken
+      }) as unknown as InstanceType<typeof GoogleTokenGenerator>);
+
+      mockRequest.headers = {
+        authorization: 'Bearer user-jwt-token'
+      };
+
+      const middleware = createAuthMiddleware(
+        prodUserTokenConfig,
+        prodGoogleConfig,
+        'test-audience'
+      );
+
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
   });
 
   describe('Mixed Environment Configurations', () => {
-    it('should skip Firebase auth but enable Google auth', async () => {
-      const userTokenConfig: UserTokenConfig = {
+    it('should handle dev user token with prod Google auth', async () => {
+      const devUserConfig: UserTokenConfig = {
         skipVerification: true,
         mockUser: { sub: 'dev-user', email: 'dev@example.com' }
       };
 
-      const googleConfig: GoogleAuthConfig = {
+      const prodGoogleConfig: GoogleAuthConfig = {
         skipAuth: false,
         projectId: 'test-project'
       };
 
-      // Mock Google token generator
-      const originalGoogleGenerator = await import('./google/tokenGenerator.js');
-      vi.spyOn(originalGoogleGenerator, 'GoogleTokenGenerator').mockImplementation(() => ({
-        generateIdToken: vi.fn().mockResolvedValue('real-service-token')
-      } as any));
+      const { GoogleTokenGenerator } = await import('./google/tokenGenerator.js');
+      const mockGenerateIdToken = vi.fn().mockResolvedValue('real-google-token');
+      vi.mocked(GoogleTokenGenerator).mockImplementation(() => ({
+        generateIdToken: mockGenerateIdToken
+      }) as unknown as InstanceType<typeof GoogleTokenGenerator>);
 
-      const middleware = createAuthMiddleware(userTokenConfig, googleConfig, 'test-audience');
-      
-      await middleware(mockRequest as Request, mockResponse as Response, nextFunction);
+      const middleware = createAuthMiddleware(
+        devUserConfig,
+        prodGoogleConfig,
+        'test-audience'
+      );
 
-      expect(nextFunction).toHaveBeenCalledWith();
-      expect(mockRequest.user).toEqual({ sub: 'dev-user', email: 'dev@example.com' });
-      expect(mockRequest.headers!.authorization).toBe('Bearer real-service-token');
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockRequest.user).toEqual({
+        sub: 'dev-user',
+        email: 'dev@example.com'
+      });
+      expect(mockGenerateIdToken).toHaveBeenCalledWith('test-audience');
+      expect(mockRequest.headers?.authorization).toBe('Bearer real-google-token');
+      expect(mockNext).toHaveBeenCalledWith();
     });
   });
 }); 

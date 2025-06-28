@@ -114,7 +114,7 @@ export function createApp(
 
         // Handle authentication errors
         if (error instanceof UserTokenVerificationError || error instanceof AuthenticationError) {
-            const isExpired = (error as any).isExpired === true;
+            const isExpired = (error as UserTokenVerificationError & { isExpired?: boolean }).isExpired === true;
             
             return res.status(401).json({
                 error: {
