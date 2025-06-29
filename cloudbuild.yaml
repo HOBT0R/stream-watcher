@@ -28,19 +28,25 @@ steps:
     args:
       - '-c'
       - |
+        # Pull the latest image for layer caching
+        docker pull us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:latest || true
+        
         docker build \
           --tag 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA' \
+          --tag 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:latest' \
+          --cache-from 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:latest' \
           --build-arg FIREBASE_BUILD_ENV="$$FIREBASE_BUILD_ENV" \
           --build-arg VITE_FIREBASE_PROJECT_ID=$PROJECT_ID \
           .
     secretEnv:
       - 'FIREBASE_BUILD_ENV'
 
-  # 5. Push the image to Google Artifact Registry
+  # 5. Push both the versioned and latest images to Google Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA'
+      - '--all-tags'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy'
 
   # 6. Deploy to Cloud Run with runtime secrets for the proxy
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -61,12 +67,12 @@ steps:
       - '--set-env-vars'
       - >-
         NODE_ENV=production,
-        FIREBASE_PROJECT_ID=$PROJECT_ID,
+        GOOGLE_CLOUD_PROJECT=$PROJECT_ID,
         BFF_TARGET_URL=https://twitchservice-6jrv3su7zq-uc.a.run.app,
         BFF_AUDIENCE=https://twitchservice-6jrv3su7zq-uc.a.run.app,
         JWT_ISSUER=https://securetoken.google.com/$PROJECT_ID,
         JWT_AUDIENCE=$PROJECT_ID,
-        JWT_xJxWKS_URI=https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com,
+        JWT_JWKS_URI=https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com,
         LOG_BFF_TOKEN=true
       - '--quiet'
 

@@ -4,16 +4,16 @@ import * as http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createAuthMiddleware } from './auth/middleware.js';
-import { getUserTokenConfig } from './auth/user-token-verifier/config.js';
-import { getGoogleAuthConfig } from './auth/google/config.js';
 import { type AppConfig } from './config.js';
+import { type ValidatedAppConfig } from './config/index.js';
 import { UserTokenVerificationError } from './auth/user-token-verifier/errors.js';
 import { AuthenticationError } from './auth/types.js';
 import morgan from 'morgan';
 import cors from 'cors';
 
 export function createApp(
-    config: AppConfig
+    config: AppConfig,
+    validatedConfig: ValidatedAppConfig
 ): Application {
     const app = express();
 
@@ -21,9 +21,23 @@ export function createApp(
     // Constants & Configuration
     // ================================
     
-    // Auth configurations
-    const userTokenConfig = getUserTokenConfig();
-    const googleConfig = getGoogleAuthConfig();
+    // Auth configurations from validated config
+    const userTokenConfig = {
+        skipVerification: validatedConfig.userToken.skipVerification,
+        publicKey: validatedConfig.userToken.publicKey,
+        jwksUri: validatedConfig.userToken.jwksUri?.toString(),
+        issuer: validatedConfig.userToken.issuer,
+        audience: validatedConfig.userToken.audience,
+        mockUser: validatedConfig.userToken.mockUser
+    };
+    
+    const googleConfig = {
+        skipAuth: validatedConfig.google.skipAuth,
+        projectId: validatedConfig.google.projectId,
+        audience: validatedConfig.google.audience,
+        mockToken: validatedConfig.google.mockToken
+    };
+    
     const authMiddleware = createAuthMiddleware(
         userTokenConfig,
         googleConfig,
@@ -92,6 +106,22 @@ export function createApp(
     // Health check endpoint
     app.get('/healthz', (_req: Request, res: Response) => {
         res.status(200).send('OK');
+    });
+
+    // Enhanced health check endpoint with configuration status
+    app.get('/health', (_req: Request, res: Response) => {
+        const configHealth = {
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            environment: process.env.NODE_ENV || 'development',
+            config: {
+                bffTarget: config.bffTargetUrl,
+                authConfigured: !userTokenConfig.skipVerification,
+                googleAuthConfigured: !googleConfig.skipAuth
+            }
+        };
+        
+        res.json(configHealth);
     });
 
     // API routes (auth + proxy)
