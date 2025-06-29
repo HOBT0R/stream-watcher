@@ -4,6 +4,7 @@ import { Application, Request, Response, NextFunction } from 'express';
 import http from 'http';
 import { GoogleAuth } from 'google-auth-library';
 import { type AppConfig } from './config.js';
+import { type ValidatedAppConfig } from './config/index.js';
 import { buildUnsignedJwt } from './test-helpers/jwtHelpers.js';
 
 // Mock dotenv to prevent it from loading .env files
@@ -51,6 +52,7 @@ describe('Express App', () => {
     let mockBffServer: http.Server;
     let mockBffUrl: string;
     let mockConfig: AppConfig;
+    let mockValidatedConfig: ValidatedAppConfig;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let createApp: any;
 
@@ -107,7 +109,22 @@ describe('Express App', () => {
                 projectId: '',
             },
         };
-        app = createApp(mockConfig);
+        
+        mockValidatedConfig = {
+            port: 8080,
+            bffTargetUrl: new URL(mockBffUrl),
+            bffAudience: new URL('https://twitchservice-230964387213.us-central1.run.app'),
+            userToken: {
+                skipVerification: true,
+                mockUser: { sub: 'test-user', email: 'test@example.com', name: 'Test User' }
+            },
+            google: {
+                skipAuth: true,
+                mockToken: 'test-token'
+            }
+        };
+        
+        app = createApp(mockConfig, mockValidatedConfig);
     });
 
     afterAll(() => {
@@ -153,7 +170,7 @@ describe('Express App', () => {
         process.env.NODE_ENV = 'production';
 
         // Re-create the app **after** setting NODE_ENV to production to pick up the change
-        app = createApp(mockConfig);
+        app = createApp(mockConfig, mockValidatedConfig);
 
         const response = await request(app).get('/api/idtoken/test');
 

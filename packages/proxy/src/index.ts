@@ -1,8 +1,12 @@
 import http from 'http';
 import { createApp } from './app.js';
-import config from './config.js';
+import { getValidatedConfigAsLegacy, getValidatedConfig } from './config/index.js';
 
-const app = createApp(config);
+// Validate configuration at startup - will exit process if invalid
+const config = getValidatedConfigAsLegacy();
+const validatedConfig = getValidatedConfig();
+
+const app = createApp(config, validatedConfig);
 const server = http.createServer(app);
 
 server.listen(config.port, () => {

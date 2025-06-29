@@ -29,15 +29,27 @@
 
 ## 🏗️ Technical Design
 
-### Current State
+### Current State (After Story-12)
 ```typescript
 // config.ts - Basic config with minimal validation
-export function getConfig(): AppConfig {
-  return {
-    port: parseInt(process.env.PORT ?? '8080'),
-    bffTargetUrl: process.env.BFF_TARGET_URL ?? '',
-    // ... other configs without validation
-  };
+export interface AppConfig {
+    port: number;
+    bffTargetUrl: string;
+    bffAudience: string;
+    jwt: { skipVerification?: boolean; publicKey?: string; /* ... */ };
+    firebase: { projectId: string; };
+}
+
+// Separate auth configs (created in Story-12)
+// src/auth/user-token-verifier/config.ts
+export function getUserTokenConfig(): UserTokenConfig { /* env-specific logic */ }
+
+// src/auth/google/config.ts  
+export function getGoogleAuthConfig(): GoogleAuthConfig { /* env-specific logic */ }
+
+// Basic validation exists but is limited
+if (!config.jwt.skipVerification && !config.firebase.projectId) {
+    throw new Error('Missing critical configuration...');
 }
 ```
 
@@ -56,10 +68,11 @@ export class ConfigValidator {
   validatePort(port: string, fieldName: string): ValidationError | null;
 }
 
-// config/schema.ts
+// config/schema.ts - Updated to match current structure
 export interface ValidatedAppConfig {
   readonly port: number;
   readonly bffTargetUrl: URL;
+  readonly bffAudience: URL;
   readonly userToken: ValidatedUserTokenConfig;
   readonly google: ValidatedGoogleConfig;
 }
@@ -159,15 +172,18 @@ export interface ValidatedAppConfig {
    export interface BaseConfig {
      port: number;
      bffTargetUrl: URL;
+     bffAudience: URL;
    }
    
    export interface DevelopmentConfig extends BaseConfig {
      userToken: {
-       skipVerification: true;
+       skipVerification: boolean; // can be true or false in dev
        publicKey?: string;
+       mockUser?: object;
      };
      google: {
        skipAuth: true;
+       mockToken?: string;
      };
    }
    

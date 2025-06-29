@@ -26,7 +26,14 @@ RUN if [ -n "$FIREBASE_BUILD_ENV" ]; then \
       echo "VITE_FIREBASE_APP_ID=fake-app-id" >> .env; \
     fi
 
+# Copy package files first for better caching
 COPY package*.json ./
+COPY packages/proxy/package*.json ./packages/proxy/
+
+# Install dependencies (this layer will be cached if package.json doesn't change)
+RUN npm install --legacy-peer-deps --ignore-scripts
+
+# Copy source code after dependencies are installed
 COPY src ./src
 COPY public ./public
 COPY index.html .
@@ -35,34 +42,38 @@ COPY vite.config.proxy.js ./
 COPY tsconfig.json ./
 COPY tsconfig.node.json ./
 
-# The hardcoded ENV block is no longer needed, as variables are now in .env
-# RUN npm install ... (this is now run after creating .env)
-RUN npm install --legacy-peer-deps --ignore-scripts
 RUN npm run build:ui
 
-# Stage 2: Build the proxy
-FROM node:20-alpine AS proxy-builder
+# Stage 2: Build the proxy (reuse node_modules from stage 1)
+FROM ui-builder AS proxy-builder
 WORKDIR /app
-COPY package*.json ./
-COPY packages/proxy/package*.json ./packages/proxy/
+
+# Copy proxy source
 COPY packages/proxy/src ./packages/proxy/src
 COPY packages/proxy/tsconfig.json ./packages/proxy/
-RUN npm install --legacy-peer-deps --ignore-scripts -w packages/proxy
+
+# Dependencies already installed in previous stage
 RUN npm run build:proxy
 
-# Stage 3: Install production dependencies for the proxy only
+# Stage 3: Install production dependencies only
 FROM node:20-alpine AS deps
 WORKDIR /app
+
+# Copy package files
 COPY package*.json ./
 COPY packages/proxy/package*.json ./packages/proxy/
-RUN npm install --production --legacy-peer-deps --ignore-scripts
 
+# Install only production dependencies
+RUN npm install --production --legacy-peer-deps --ignore-scripts
 
 # Stage 4: Final runtime image
 FROM node:20-alpine
 WORKDIR /app
+
+# Copy built artifacts
 COPY --from=ui-builder /app/dist ./dist
 COPY --from=proxy-builder /app/packages/proxy/dist ./packages/proxy/dist
 COPY --from=deps /app/node_modules ./node_modules
+
 EXPOSE 8080
 CMD ["node", "packages/proxy/dist/index.js"] 
