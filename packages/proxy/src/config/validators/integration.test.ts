@@ -1,5 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { Request, Response, NextFunction } from 'express';
 import { createValidator } from './index.js';
+
+// Mock modules for integration testing
+vi.mock('../../auth/middleware.js', () => ({
+  createAuthMiddleware: vi.fn()
+}));
 
 describe('Configuration Validators Integration', () => {
   let originalEnv: NodeJS.ProcessEnv;
@@ -133,27 +139,26 @@ describe('Configuration Validators Integration', () => {
     });
 
     it('should handle APP_CONFIG_JSON format', () => {
-      const secretConfig = {
+      const appConfigJson = JSON.stringify({
         cloudRunUrl: 'https://my-service-hash-uc.a.run.app'
-      };
-      
+      });
+
       const env = {
         NODE_ENV: 'production',
-        APP_CONFIG_JSON: JSON.stringify(secretConfig),
+        APP_CONFIG_JSON: appConfigJson,
         JWT_JWKS_URI: 'https://auth.example.com/.well-known/jwks.json',
         JWT_ISSUER: 'https://auth.example.com',
         JWT_AUDIENCE: 'https://api.example.com',
-        GOOGLE_CLOUD_PROJECT: 'my-project-123',
-        BFF_AUDIENCE: 'https://my-service-hash-uc.a.run.app'
+        GOOGLE_CLOUD_PROJECT: 'my-project-123'
       };
 
       const validator = createValidator('production');
       const result = validator.validate(env);
-
       expect(result.isValid).toBe(true);
+
       const config = validator.getConfig();
       expect(config.bffTargetUrl.toString()).toBe('https://my-service-hash-uc.a.run.app/');
-      expect(config.bffAudience.toString()).toBe('https://my-service-hash-uc.a.run.app/');
+      expect(config.bffAudience).toBe('https://my-service-hash-uc.a.run.app'); // String - no trailing slash!
     });
 
     it('should fail for invalid APP_CONFIG_JSON format', () => {
@@ -196,6 +201,107 @@ describe('Configuration Validators Integration', () => {
       );
       expect(protocolError).toBeDefined();
     });
+
+    it('should preserve exact string format for JWT audience validation', () => {
+      // This test verifies different URL formats are preserved exactly
+      
+      const testCases = [
+        'https://example.com',           // No trailing slash
+        'https://example.com/',          // With trailing slash  
+        'https://example.com/path',      // With path
+        'https://example.com:8080'       // With port
+      ];
+
+      for (const testUrl of testCases) {
+        const env = {
+          NODE_ENV: 'production',
+          BFF_TARGET_URL: 'https://api.example.com',
+          BFF_AUDIENCE: testUrl,
+          JWT_JWKS_URI: 'https://auth.example.com/.well-known/jwks.json',
+          JWT_ISSUER: 'https://auth.example.com',
+          JWT_AUDIENCE: 'https://api.example.com',
+          GOOGLE_CLOUD_PROJECT: 'my-project-123'
+        };
+
+        const validator = createValidator('production');
+        const result = validator.validate(env);
+        expect(result.isValid).toBe(true);
+        
+        const validatedConfig = validator.getConfig();
+        
+        // The exact string format is preserved
+        expect(validatedConfig.bffAudience).toBe(testUrl);
+      }
+    });
+
+    it('should pass correct audience string to auth middleware without normalization', async () => {
+      // This integration test verifies the full flow works correctly
+      
+      const testAudienceUrl = 'https://example.com'; // No trailing slash
+      
+      const env = {
+        NODE_ENV: 'production',
+        BFF_TARGET_URL: 'https://api.example.com',
+        BFF_AUDIENCE: testAudienceUrl,
+        JWT_JWKS_URI: 'https://auth.example.com/.well-known/jwks.json',
+        JWT_ISSUER: 'https://auth.example.com',
+        JWT_AUDIENCE: 'https://api.example.com',
+        GOOGLE_CLOUD_PROJECT: 'my-project-123'
+      };
+
+      const validator = createValidator('production');
+      const result = validator.validate(env);
+      expect(result.isValid).toBe(true);
+      
+      const validatedConfig = validator.getConfig();
+      
+      // Clear all mocks and reset modules to ensure clean test
+      vi.clearAllMocks();
+      vi.resetModules();
+      
+      // Import and mock the auth middleware to capture the audience parameter
+      const { createAuthMiddleware } = await import('../../auth/middleware.js');
+      
+      // Create a spy that captures the bffAudience parameter
+      const authMiddlewareSpy = vi.fn().mockReturnValue(
+        (_req: Request, _res: Response, next: NextFunction) => next()
+      );
+      vi.mocked(createAuthMiddleware).mockImplementation(authMiddlewareSpy);
+      
+      // Import and create the app - this will call createAuthMiddleware
+      const { createApp } = await import('../../app.js');
+      
+      // Create the legacy config that app.ts expects
+      const legacyConfig = {
+        port: validatedConfig.port,
+        bffTargetUrl: validatedConfig.bffTargetUrl.toString(),
+        bffAudience: validatedConfig.bffAudience, // Now a string - no normalization!
+        jwt: {
+          skipVerification: validatedConfig.userToken.skipVerification,
+          jwksUri: validatedConfig.userToken.jwksUri?.toString() || '',
+          issuer: validatedConfig.userToken.issuer || '',
+          audience: validatedConfig.userToken.audience || ''
+        },
+        firebase: {
+          projectId: validatedConfig.google.projectId || ''
+        }
+      };
+      
+      // Create the app - this should work perfectly now
+      createApp(legacyConfig, validatedConfig);
+      
+      // Verify createAuthMiddleware was called
+      expect(authMiddlewareSpy).toHaveBeenCalled();
+      
+      // Get the actual bffAudience parameter passed to createAuthMiddleware
+      const callArgs = authMiddlewareSpy.mock.calls[0];
+      const actualBffAudience = callArgs[2]; // Third parameter is bffAudience
+      
+      // Perfect! The exact string is passed through with no modifications
+      expect(actualBffAudience).toBe(testAudienceUrl);
+      expect(actualBffAudience).toBe('https://example.com'); // Exact match
+      expect(actualBffAudience).not.toMatch(/\/$/); // No trailing slash
+    });
   });
 
   describe('Environment Selection', () => {
@@ -222,6 +328,73 @@ describe('Configuration Validators Integration', () => {
       expect(result.isValid).toBe(true);
       const config = validator.getConfig();
       expect(config.google.skipAuth).toBe(true);
+    });
+  });
+
+  describe('URL Normalization Bug Detection', () => {
+    it('should demonstrate the fix - bffAudience is now stored as string', () => {
+      // This test shows that we fixed the URL trailing slash bug by storing as string
+      
+      const testAudienceUrl = 'https://example.com'; // No trailing slash
+      
+      const env = {
+        NODE_ENV: 'production',
+        BFF_TARGET_URL: 'https://api.example.com',
+        BFF_AUDIENCE: testAudienceUrl,
+        JWT_JWKS_URI: 'https://auth.example.com/.well-known/jwks.json',
+        JWT_ISSUER: 'https://auth.example.com',
+        JWT_AUDIENCE: 'https://api.example.com',
+        GOOGLE_CLOUD_PROJECT: 'my-project-123'
+      };
+
+      const validator = createValidator('production');
+      const result = validator.validate(env);
+      expect(result.isValid).toBe(true);
+      
+      const validatedConfig = validator.getConfig();
+      
+      // 1. bffAudience is now stored as a string (not URL object)
+      expect(validatedConfig.bffAudience).toBe(testAudienceUrl);
+      expect(typeof validatedConfig.bffAudience).toBe('string');
+      
+      // 2. No trailing slash normalization occurs
+      expect(validatedConfig.bffAudience).toBe('https://example.com'); // Exact match!
+      expect(validatedConfig.bffAudience).not.toMatch(/\/$/); // No trailing slash
+      
+      // 3. The configuration is still validated as a proper URL (just not stored as one)
+      expect(() => new URL(validatedConfig.bffAudience)).not.toThrow();
+    });
+
+    it('should preserve exact string format for JWT audience validation', () => {
+      // This test verifies different URL formats are preserved exactly
+      
+      const testCases = [
+        'https://example.com',           // No trailing slash
+        'https://example.com/',          // With trailing slash  
+        'https://example.com/path',      // With path
+        'https://example.com:8080'       // With port
+      ];
+
+      for (const testUrl of testCases) {
+        const env = {
+          NODE_ENV: 'production',
+          BFF_TARGET_URL: 'https://api.example.com',
+          BFF_AUDIENCE: testUrl,
+          JWT_JWKS_URI: 'https://auth.example.com/.well-known/jwks.json',
+          JWT_ISSUER: 'https://auth.example.com',
+          JWT_AUDIENCE: 'https://api.example.com',
+          GOOGLE_CLOUD_PROJECT: 'my-project-123'
+        };
+
+        const validator = createValidator('production');
+        const result = validator.validate(env);
+        expect(result.isValid).toBe(true);
+        
+        const validatedConfig = validator.getConfig();
+        
+        // The exact string format is preserved
+        expect(validatedConfig.bffAudience).toBe(testUrl);
+      }
     });
   });
 }); 

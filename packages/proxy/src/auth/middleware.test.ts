@@ -6,19 +6,31 @@ import { createAuthMiddleware } from './middleware.js';
 import { UserTokenConfig } from './user-token-verifier/types.js';
 import { GoogleAuthConfig } from './google/types.js';
 
+// Type for extended request in tests
+interface TestRequest extends Partial<Request> {
+  user?: { sub: string; email: string; name?: string };
+  headers?: Record<string, string>;
+}
+
+// Type for mocked NextFunction
+type MockNextFunction = ReturnType<typeof vi.fn> & {
+  mock: {
+    calls: Array<[Error?]>;
+  };
+};
+
 // Mock the auth modules
 vi.mock('./user-token-verifier/verifier.js');
 vi.mock('./google/tokenGenerator.js');
 
 describe('Auth Middleware', () => {
-  let mockRequest: Partial<Request>;
+  let mockRequest: TestRequest;
   let mockResponse: Partial<Response>;
-  let mockNext: NextFunction;
+  let mockNext: MockNextFunction;
 
   beforeEach(() => {
     mockRequest = {
-      headers: {},
-      user: undefined
+      headers: {}
     };
     
     mockResponse = {
@@ -26,7 +38,7 @@ describe('Auth Middleware', () => {
       json: vi.fn().mockReturnThis()
     };
     
-    mockNext = vi.fn() as NextFunction;
+    mockNext = vi.fn() as MockNextFunction;
     
     vi.clearAllMocks();
   });
@@ -53,7 +65,7 @@ describe('Auth Middleware', () => {
         'test-audience'
       );
 
-      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext as NextFunction);
 
       expect(mockRequest.user).toEqual({
         sub: 'dev-user-123',
@@ -74,7 +86,7 @@ describe('Auth Middleware', () => {
         'test-audience'
       );
 
-      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext as NextFunction);
 
       expect(mockRequest.user).toEqual({
         sub: 'dev-user',
@@ -140,14 +152,14 @@ describe('Auth Middleware', () => {
         'test-audience'
       );
 
-      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext as NextFunction);
 
-      expect(mockVerify).toHaveBeenCalledWith('user-jwt-token');
+      expect(mockVerify).toHaveBeenCalledWith('user-jwt-token', undefined);
       expect(mockRequest.user).toEqual({
         sub: 'user-123',
         email: 'user@example.com'
       });
-      expect(mockGenerateIdToken).toHaveBeenCalledWith('test-audience');
+      expect(mockGenerateIdToken).toHaveBeenCalledWith('test-audience', undefined);
       expect(mockRequest.headers?.authorization).toBe('Bearer google-service-token');
       expect(mockNext).toHaveBeenCalledWith();
     });
@@ -159,11 +171,11 @@ describe('Auth Middleware', () => {
         'test-audience'
       );
 
-      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext as NextFunction);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
-      const error = (mockNext as jest.Mock).mock.calls[0][0];
-      expect(error.message).toContain('Authorization header required');
+      const error = mockNext.mock.calls[0][0];
+      expect(error?.message).toContain('Authorization header required');
     });
 
     it('should handle malformed authorization header', async () => {
@@ -177,11 +189,11 @@ describe('Auth Middleware', () => {
         'test-audience'
       );
 
-      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext as NextFunction);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
-      const error = (mockNext as jest.Mock).mock.calls[0][0];
-      expect(error.message).toContain('Authorization header required');
+      const error = mockNext.mock.calls[0][0];
+      expect(error?.message).toContain('Authorization header required');
     });
 
     it('should handle user token verification failure', async () => {
@@ -264,15 +276,60 @@ describe('Auth Middleware', () => {
         'test-audience'
       );
 
-      await middleware(mockRequest as Request, mockResponse as Response, mockNext);
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext as NextFunction);
 
       expect(mockRequest.user).toEqual({
         sub: 'dev-user',
         email: 'dev@example.com'
       });
-      expect(mockGenerateIdToken).toHaveBeenCalledWith('test-audience');
+      expect(mockGenerateIdToken).toHaveBeenCalledWith('test-audience', undefined);
       expect(mockRequest.headers?.authorization).toBe('Bearer real-google-token');
       expect(mockNext).toHaveBeenCalledWith();
+    });
+  });
+
+  describe('Configuration Integration', () => {
+    it('should pass exact bffAudience from config to Google token generator without trailing slash', async () => {
+      // This integration test verifies that when we configure a BFF audience URL,
+      // it gets passed to the Google token generator exactly as specified,
+      // without URL normalization adding a trailing slash.
+      
+      const testAudience = 'https://example.com';
+      
+      const prodUserConfig: UserTokenConfig = {
+        skipVerification: true, // Skip user token verification for this test
+        mockUser: { sub: 'test-user', email: 'test@example.com' }
+      };
+
+      const prodGoogleConfig: GoogleAuthConfig = {
+        skipAuth: false, // Force real Google token generation
+        projectId: 'test-project'
+      };
+
+      // Mock the Google token generator to capture the audience parameter
+      const { GoogleTokenGenerator } = await import('./google/tokenGenerator.js');
+      const mockGenerateIdToken = vi.fn().mockResolvedValue('test-token');
+      vi.mocked(GoogleTokenGenerator).mockImplementation(() => ({
+        generateIdToken: mockGenerateIdToken
+      }) as unknown as InstanceType<typeof GoogleTokenGenerator>);
+
+      const middleware = createAuthMiddleware(
+        prodUserConfig,
+        prodGoogleConfig,
+        testAudience // This simulates config.bffAudience being passed from app.ts
+      );
+
+      await middleware(mockRequest as Request, mockResponse as Response, mockNext as NextFunction);
+
+      // Verify the exact audience value passed to Google token generator
+      expect(mockGenerateIdToken).toHaveBeenCalledWith(testAudience, undefined);
+      
+      // This assertion will fail with the current bug:
+      // Expected: "https://example.com"
+      // Received: "https://example.com/"
+      const actualAudience = mockGenerateIdToken.mock.calls[0][0];
+      expect(actualAudience).toBe(testAudience);
+      expect(actualAudience).not.toMatch(/\/$/); // Should not end with trailing slash
     });
   });
 }); 

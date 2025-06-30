@@ -16,6 +16,45 @@ export default defineConfig({
             },
         ],
     },
+    build: {
+        // Optimize bundle size and loading performance
+        rollupOptions: {
+            output: {
+                // Manual chunk splitting for better caching
+                manualChunks: {
+                    // React ecosystem
+                    'react-vendor': ['react', 'react-dom'],
+                    
+                    // Firebase
+                    'firebase-vendor': ['firebase/app', 'firebase/auth'],
+                    
+                    // UI libraries  
+                    'ui-vendor': ['@mui/material', '@emotion/react', '@emotion/styled'],
+                    
+                    // Testing libraries (only in dev)
+                    ...(process.env.NODE_ENV === 'development' && {
+                        'test-vendor': ['@testing-library/react', '@testing-library/jest-dom', 'vitest']
+                    }),
+                },
+                // Better file naming for caching
+                chunkFileNames: 'assets/[name]-[hash].js',
+                entryFileNames: 'assets/[name]-[hash].js',
+                assetFileNames: 'assets/[name]-[hash].[ext]'
+            }
+        },
+        // Increase chunk size warning limit (we're splitting chunks now)
+        chunkSizeWarningLimit: 1000,
+        
+        // Enable source maps for production debugging (optional)
+        sourcemap: process.env.NODE_ENV === 'development',
+        
+        // Optimize for production
+        minify: 'esbuild',
+        target: 'es2020',
+        
+        // Asset optimization
+        assetsInlineLimit: 4096, // Inline assets smaller than 4KB
+    },
     server: {
         host: true, // listen on all addresses during dev
         proxy: {

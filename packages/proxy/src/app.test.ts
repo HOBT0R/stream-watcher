@@ -53,8 +53,7 @@ describe('Express App', () => {
     let mockBffUrl: string;
     let mockConfig: AppConfig;
     let mockValidatedConfig: ValidatedAppConfig;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let createApp: any;
+    let createApp: (config: AppConfig, validatedConfig: ValidatedAppConfig) => Application;
 
     beforeAll(() => {
         return new Promise<void>((resolve) => {
@@ -113,7 +112,7 @@ describe('Express App', () => {
         mockValidatedConfig = {
             port: 8080,
             bffTargetUrl: new URL(mockBffUrl),
-            bffAudience: new URL('https://twitchservice-230964387213.us-central1.run.app'),
+            bffAudience: 'https://twitchservice-230964387213.us-central1.run.app',
             userToken: {
                 skipVerification: true,
                 mockUser: { sub: 'test-user', email: 'test@example.com', name: 'Test User' }
@@ -121,6 +120,14 @@ describe('Express App', () => {
             google: {
                 skipAuth: true,
                 mockToken: 'test-token'
+            },
+            logging: {
+                level: 'error', // Set to error level to minimize test output
+                format: 'simple',
+                enableRequestLogging: false, // Disable for tests
+                enableBffTokenLogging: false,
+                enableRequestBodyLogging: false,
+                enableFileLogging: false
             }
         };
         

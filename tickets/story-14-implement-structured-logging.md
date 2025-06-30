@@ -32,22 +32,20 @@
 
 ### Current State
 ```typescript
-// Scattered console.log statements
-console.log('[Auth → BFF] Outgoing Bearer token:', idToken);
-console.log('[Proxy→BFF] Authorization header:', outboundAuth);
+// Scattered console.log statements throughout the codebase
+console.log('[Config] targetUrl =', config.bffTargetUrl);
+console.log('[Proxy→BFF] Authorization header (post-proxy):', outboundAuth);
+console.error('[Global Error Handler]', error.message, error);
 ```
 
 ### Target State
 ```typescript
-// Structured logging with correlation
+// Structured logging with correlation integrated into validated config
 import { logger } from './utils/logger.js';
 
-// Request middleware
-app.use((req, res, next) => {
-  req.correlationId = generateCorrelationId();
-  req.logger = logger.child({ correlationId: req.correlationId });
-  next();
-});
+// Request middleware with validated config
+app.use(correlationMiddleware(validatedConfig.logging));
+app.use(requestLoggingMiddleware(validatedConfig.logging));
 
 // Throughout the app
 req.logger.info('Processing auth request', {
@@ -67,111 +65,194 @@ req.logger.info('Processing auth request', {
    npm install --save-dev @types/winston
    ```
 
-2. **Create logging configuration**
+2. **Extend config schema with logging configuration**
+   ```typescript
+   // src/config/schema.ts
+   export interface ValidatedLoggingConfig {
+     level: string;
+     format: 'json' | 'simple';
+     enableRequestLogging: boolean;
+     enableBffTokenLogging: boolean;
+     enableRequestBodyLogging: boolean;
+     enableFileLogging: boolean;
+   }
+
+   export interface ValidatedAppConfig extends BaseConfig {
+     userToken: ValidatedUserTokenConfig;
+     google: ValidatedGoogleConfig;
+     logging: ValidatedLoggingConfig;
+   }
+   ```
+
+3. **Add logging validation to environment validators**
+   ```typescript
+   // src/config/validators/development.ts & production.ts
+   const logging = {
+     level: env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info'),
+     format: isDevelopment ? 'simple' as const : 'json' as const,
+     enableRequestLogging: env.ENABLE_REQUEST_LOGGING !== 'false',
+     enableBffTokenLogging: env.LOG_BFF_TOKEN === 'true',
+     enableRequestBodyLogging: env.LOG_REQUEST_BODY === 'true',
+     enableFileLogging: isDevelopment
+   };
+   ```
+
+4. **Create logging configuration**
    ```typescript
    // src/utils/logger.ts
    import winston from 'winston';
+   import { ValidatedLoggingConfig } from '../config/schema.js';
    
-   const isDevelopment = process.env.NODE_ENV !== 'production';
-   
-   export const logger = winston.createLogger({
-     level: process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info'),
-     format: winston.format.combine(
-       winston.format.timestamp(),
-       winston.format.errors({ stack: true }),
-       isDevelopment 
-         ? winston.format.combine(
-             winston.format.colorize(),
-             winston.format.simple()
-           )
-         : winston.format.json()
-     ),
-     transports: [
-       new winston.transports.Console(),
-       // Add file transport for development
-       ...(isDevelopment ? [
-         new winston.transports.File({ 
-           filename: 'logs/proxy.log',
-           level: 'debug'
-         })
-       ] : [])
-     ]
-   });
+   export function createLogger(config: ValidatedLoggingConfig): winston.Logger {
+     const transports: winston.transport[] = [
+       new winston.transports.Console()
+     ];
+
+     if (config.enableFileLogging) {
+       transports.push(new winston.transports.File({ 
+         filename: 'logs/proxy.log',
+         level: 'debug'
+       }));
+     }
+
+     return winston.createLogger({
+       level: config.level,
+       format: winston.format.combine(
+         winston.format.timestamp(),
+         winston.format.errors({ stack: true }),
+         config.format === 'simple'
+           ? winston.format.combine(
+               winston.format.colorize(),
+               winston.format.simple()
+             )
+           : winston.format.json()
+       ),
+       transports
+     });
+   }
    ```
 
-3. **Create correlation ID middleware**
+5. **Create correlation ID middleware**
    ```typescript
    // src/middleware/correlation.ts
    import { Request, Response, NextFunction } from 'express';
    import { randomUUID } from 'crypto';
-   import { logger } from '../utils/logger.js';
+   import winston from 'winston';
    
-   export function correlationMiddleware(req: Request, res: Response, next: NextFunction) {
-     // Check if correlation ID already exists (from load balancer)
-     const existingId = req.headers['x-correlation-id'] as string;
-     const correlationId = existingId || randomUUID();
-     
-     // Attach to request
-     req.correlationId = correlationId;
-     req.logger = logger.child({ 
-       correlationId,
-       service: 'proxy' 
-     });
-     
-     // Add to response headers
-     res.setHeader('x-correlation-id', correlationId);
-     
-     next();
+   export function createCorrelationMiddleware(logger: winston.Logger) {
+     return (req: Request, res: Response, next: NextFunction) => {
+       // Check if correlation ID already exists (from load balancer)
+       const existingId = req.headers['x-correlation-id'] as string;
+       const correlationId = existingId || randomUUID();
+       
+       // Attach to request
+       req.correlationId = correlationId;
+       req.logger = logger.child({ 
+         correlationId,
+         service: 'proxy' 
+       });
+       
+       // Add to response headers
+       res.setHeader('x-correlation-id', correlationId);
+       
+       next();
+     };
    }
    ```
 
-### Phase 2: Request/Response Logging (1.5 hours)
+### Phase 2: Request/Response Logging & App Integration (1.5 hours)
 
 1. **Create request logging middleware**
    ```typescript
    // src/middleware/requestLogging.ts
-   export function requestLoggingMiddleware(req: Request, res: Response, next: NextFunction) {
-     const startTime = Date.now();
-     
-     req.logger.info('Request started', {
-       method: req.method,
-       url: req.url,
-       userAgent: req.headers['user-agent'],
-       ip: req.ip,
-       userId: req.user?.sub // Added after auth middleware
-     });
-     
-     // Log request body for debugging (sanitized)
-     if (process.env.LOG_REQUEST_BODY === 'true' && req.body) {
-       req.logger.debug('Request body', {
-         body: sanitizeRequestBody(req.body)
-       });
-     }
-     
-     // Capture response
-     const originalSend = res.send;
-     res.send = function(body) {
-       const duration = Date.now() - startTime;
+   import { Request, Response, NextFunction } from 'express';
+   import { ValidatedLoggingConfig } from '../config/schema.js';
+   import { sanitizeRequestBody } from '../utils/sanitizer.js';
+
+   export function createRequestLoggingMiddleware(config: ValidatedLoggingConfig) {
+     return (req: Request, res: Response, next: NextFunction) => {
+       if (!config.enableRequestLogging) {
+         return next();
+       }
+
+       const startTime = Date.now();
        
-       req.logger.info('Request completed', {
+       req.logger.info('Request started', {
          method: req.method,
          url: req.url,
-         statusCode: res.statusCode,
-         duration,
-         responseSize: body?.length || 0
+         userAgent: req.headers['user-agent'],
+         ip: req.ip,
+         userId: req.user?.sub // Added after auth middleware
        });
        
-       if (res.statusCode >= 400) {
-         req.logger.error('Request failed', {
-           statusCode: res.statusCode,
-           error: body
+       // Log request body for debugging (sanitized)
+       if (config.enableRequestBodyLogging && req.body) {
+         req.logger.debug('Request body', {
+           body: sanitizeRequestBody(req.body)
          });
        }
        
-       return originalSend.call(this, body);
+       // Capture response
+       const originalSend = res.send;
+       res.send = function(body) {
+         const duration = Date.now() - startTime;
+         
+         req.logger.info('Request completed', {
+           method: req.method,
+           url: req.url,
+           statusCode: res.statusCode,
+           duration,
+           responseSize: body?.length || 0
+         });
+         
+         if (res.statusCode >= 400) {
+           req.logger.error('Request failed', {
+             statusCode: res.statusCode,
+             error: body
+           });
+         }
+         
+         return originalSend.call(this, body);
+       };
+       
+       next();
      };
-     
-     next();
+   }
+
+2. **Update app.ts to integrate logging**
+   ```typescript
+   // src/app.ts
+   import { createLogger } from './utils/logger.js';
+   import { createCorrelationMiddleware } from './middleware/correlation.js';
+   import { createRequestLoggingMiddleware } from './middleware/requestLogging.js';
+
+   export function createApp(
+       config: AppConfig,
+       validatedConfig: ValidatedAppConfig
+   ): Application {
+       const app = express();
+
+       // ================================
+       // Logging Setup
+       // ================================
+       const logger = createLogger(validatedConfig.logging);
+       const correlationMiddleware = createCorrelationMiddleware(logger);
+       const requestLoggingMiddleware = createRequestLoggingMiddleware(validatedConfig.logging);
+
+       // ================================
+       // Middleware Registration
+       // ================================
+       app.use(cors());
+       app.use(express.json());
+       
+       // Add logging middleware early in the chain
+       app.use(correlationMiddleware);
+       app.use(requestLoggingMiddleware);
+       
+       // Replace morgan with our structured logging
+       // app.use(morgan('combined')); // Remove this line
+       
+       // Continue with existing middleware...
    }
    ```
 
@@ -198,14 +279,18 @@ req.logger.info('Processing auth request', {
 
 1. **Update auth middleware logging**
    ```typescript
-   // src/auth/middleware.ts
+   // src/auth/middleware.ts (update existing createAuthMiddleware function)
    export function createAuthMiddleware(
-     userTokenConfig: UserTokenConfig,
-     googleConfig: GoogleAuthConfig,
+     userTokenConfig: any, // existing type
+     googleConfig: any,    // existing type
      bffAudience: string
    ): RequestHandler {
+     const userTokenVerifier = new UserTokenVerifier(userTokenConfig);
+     const googleTokenGenerator = new GoogleTokenGenerator(googleConfig);
+
      return async (req: Request, res: Response, next: NextFunction) => {
        try {
+         // Use the logger attached by correlation middleware
          req.logger.debug('Starting authentication flow');
          
          // Phase 1: User token verification
@@ -214,7 +299,9 @@ req.logger.info('Processing auth request', {
              sub: 'dev-user',
              email: 'dev@example.com'
            };
-           req.logger.debug('Development auth bypass - using mock user');
+           req.logger.debug('Development auth bypass - using mock user', {
+             mockUserId: req.user.sub
+           });
          } else {
            const authHeader = req.headers.authorization;
            if (!authHeader?.startsWith('Bearer ')) {
@@ -224,7 +311,8 @@ req.logger.info('Processing auth request', {
            const token = authHeader.split(' ')[1];
            req.user = await userTokenVerifier.verify(token);
            req.logger.info('User token verification successful', {
-             userId: req.user.sub
+             userId: req.user.sub,
+             email: req.user.email
            });
          }
          
@@ -241,6 +329,7 @@ req.logger.info('Processing auth request', {
        } catch (error) {
          req.logger.error('Authentication failed', {
            error: error.message,
+           stack: error.stack,
            userId: req.user?.sub
          });
          next(error);
@@ -249,44 +338,102 @@ req.logger.info('Processing auth request', {
    }
    ```
 
-2. **Update proxy logging**
+2. **Update proxy configuration with structured logging**
    ```typescript
-   // src/app.ts - in proxy configuration
-   on: {
-     proxyReq: (proxyReq, req) => {
-       req.logger.debug('Forwarding request to BFF', {
-         target: config.bffTargetUrl,
-         method: proxyReq.method,
-         path: proxyReq.path
-       });
+   // src/app.ts - replace existing proxy configuration
+   const proxyOptions = {
+     target: config.bffTargetUrl,
+     changeOrigin: true,
+     headers: process.env.NODE_ENV !== 'production' ? { origin: config.bffTargetUrl } : undefined,
+     proxyTimeout: 10000,
+     timeout: 10000,
+     pathRewrite: (path: string, _req: Request) => `/api${path}`,
+     on: {
+       proxyReq: (proxyReq: http.ClientRequest, req: http.IncomingMessage & { logger?: any, correlationId?: string }) => {
+         // Add correlation ID to upstream request
+         if (req.correlationId) {
+           proxyReq.setHeader('x-correlation-id', req.correlationId);
+         }
+
+         if (req.logger) {
+           req.logger.debug('Forwarding request to BFF', {
+             target: config.bffTargetUrl,
+             method: proxyReq.method,
+             path: proxyReq.path
+           });
+
+           // Log auth header info if enabled
+           if (validatedConfig.logging.enableBffTokenLogging) {
+             const authHeader = proxyReq.getHeader('authorization');
+             req.logger.debug('Auth header forwarded to BFF', {
+               hasAuth: !!authHeader,
+               authType: authHeader?.toString().split(' ')[0]
+             });
+           }
+         }
+
+         // Remove environment-based logging
+         // Replace: if (process.env.LOG_BFF_TOKEN === 'true') { console.log(...) }
+         
+         fixRequestBody(proxyReq, req);
+       },
        
-       // Add correlation ID to upstream request
-       proxyReq.setHeader('x-correlation-id', req.correlationId);
-       
-       if (process.env.LOG_BFF_TOKEN === 'true') {
-         const authHeader = proxyReq.getHeader('authorization');
-         req.logger.debug('Auth header forwarded to BFF', {
-           hasAuth: !!authHeader,
-           authType: authHeader?.toString().split(' ')[0]
-         });
+       proxyRes: (proxyRes: http.IncomingMessage, req: http.IncomingMessage & { logger?: any }) => {
+         if (req.logger) {
+           req.logger.info('Received response from BFF', {
+             statusCode: proxyRes.statusCode,
+             contentLength: proxyRes.headers['content-length']
+           });
+         }
        }
      },
-     
-     proxyRes: (proxyRes, req) => {
-       req.logger.info('Received response from BFF', {
-         statusCode: proxyRes.statusCode,
-         contentLength: proxyRes.headers['content-length']
-       });
-     },
-     
-     error: (err, req, res) => {
-       req.logger.error('Proxy error', {
-         error: err.message,
-         stack: err.stack,
-         target: config.bffTargetUrl
+     onError: (err: Error, req: Request, res: Response | http.ServerResponse) => {
+       // Replace console.error with structured logging
+       if (req.logger) {
+         req.logger.error('Proxy error', {
+           error: err.message,
+           stack: err.stack,
+           target: config.bffTargetUrl
+         });
+       }
+       
+       // Rest of error handling remains the same...
+     }
+   };
+   ```
+
+3. **Update global error handler**
+   ```typescript
+   // src/app.ts - replace existing error handler
+   app.use((error: Error, req: Request, res: Response, _next: NextFunction) => {
+     // Replace: console.error('[Global Error Handler]', error.message, error);
+     if (req.logger) {
+       req.logger.error('Global error handler', {
+         error: error.message,
+         stack: error.stack,
+         url: req.url,
+         method: req.method,
+         userId: req.user?.sub
        });
      }
-   }
+
+     // Rest of error handling logic remains the same...
+   });
+   ```
+
+4. **Replace remaining console.log statements**
+   ```typescript
+   // src/app.ts - replace config logging
+   // Replace:
+   // console.log('[Config] targetUrl =', config.bffTargetUrl);
+   // console.log('[Config] audience =', config.bffAudience);
+
+   // With:
+   logger.info('Application configuration loaded', {
+     targetUrl: config.bffTargetUrl,
+     audience: config.bffAudience,
+     environment: process.env.NODE_ENV || 'development'
+   });
    ```
 
 ### Phase 4: Performance & Metrics Logging (30 minutes)

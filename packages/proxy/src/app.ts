@@ -10,12 +10,22 @@ import { UserTokenVerificationError } from './auth/user-token-verifier/errors.js
 import { AuthenticationError } from './auth/types.js';
 import morgan from 'morgan';
 import cors from 'cors';
+import { createLogger } from './utils/logger.js';
+import { createCorrelationMiddleware } from './middleware/correlation.js';
+import { createRequestLoggingMiddleware, createRequestDetailsMiddleware } from './middleware/requestLogging.js';
 
 export function createApp(
     config: AppConfig,
     validatedConfig: ValidatedAppConfig
 ): Application {
     const app = express();
+
+    // ================================
+    // Logging Setup
+    // ================================
+    
+    const logger = createLogger(validatedConfig.logging);
+    const correlationMiddleware = createCorrelationMiddleware(logger);
 
     // ================================
     // Constants & Configuration
@@ -41,10 +51,11 @@ export function createApp(
     const authMiddleware = createAuthMiddleware(
         userTokenConfig,
         googleConfig,
-        config.bffAudience
+        config.bffAudience,
+        logger
     );
 
-    // Proxy configuration
+    // Proxy configuration with logging
     const proxyOptions = {
         target: config.bffTargetUrl,
         changeOrigin: true,
@@ -66,19 +77,38 @@ export function createApp(
                     proxyReq.removeHeader('origin');
                 }
 
-                // Debug: log the token and final Origin header
-                if (process.env.LOG_BFF_TOKEN === 'true') {
+                // Structured logging for BFF token (if enabled)
+                if (validatedConfig.logging.enableBffTokenLogging) {
                     const outboundAuth = proxyReq.getHeader('authorization');
                     const outboundOrigin = proxyReq.getHeader('origin');
-                    console.log('[Proxy→BFF] Authorization header (post-proxy):', outboundAuth);
-                    console.log('[Proxy→BFF] Origin header (post-proxy):', outboundOrigin);
+                    const requestLogger = (req as Request).logger || logger;
+                    
+                    requestLogger.debug('BFF request details', {
+                        event: 'proxy_bff_request',
+                        authorization: outboundAuth,
+                        origin: outboundOrigin,
+                        target: config.bffTargetUrl,
+                        correlationId: (req as Request).correlationId
+                    });
                 }
 
                 fixRequestBody(proxyReq, req);
             },
         },
-        onError: (err: Error, _req: Request, res: Response | http.ServerResponse) => {
-            console.error('Proxy error:', err);
+        onError: (err: Error, req: Request, res: Response | http.ServerResponse) => {
+            const requestLogger = req.logger || logger;
+            
+            requestLogger.error('Proxy error occurred', {
+                event: 'proxy_error',
+                error: {
+                    name: err.name,
+                    message: err.message,
+                    stack: err.stack
+                },
+                target: config.bffTargetUrl,
+                correlationId: req.correlationId
+            });
+            
             if (!res.headersSent) {
                 if ('status' in res) {
                     (res as Response).status(502).json({ error: 'Bad Gateway - Upstream Error' });
@@ -101,15 +131,57 @@ export function createApp(
 
     // Global middleware
     app.use(cors());
-    app.use(morgan('combined')); // Standard Apache combined log format
+    
+    // Correlation middleware (adds logger to request)
+    app.use(correlationMiddleware);
+    
+    // Body parsing middleware (required for request body logging)
+    app.use(express.json({ limit: '10mb' }));
+    app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+    
+    // Request details logging middleware (if enabled)
+    if (validatedConfig.logging.enableRequestLogging) {
+        app.use(createRequestDetailsMiddleware(logger, true));
+    }
+    
+    // Request body logging middleware (if enabled)
+    if (validatedConfig.logging.enableRequestBodyLogging) {
+        app.use(createRequestLoggingMiddleware(logger, true));
+    }
+    
+    // Request logging middleware (only if enabled)
+    if (validatedConfig.logging.enableRequestLogging) {
+        // Custom morgan token for correlation ID
+        morgan.token('correlationId', (req: Request) => req.correlationId || '-');
+        
+        // Custom morgan format that includes correlation ID
+        const morganFormat = validatedConfig.logging.format === 'json' 
+            ? ':method :url :status :response-time ms - :correlationId'
+            : 'combined';
+            
+        app.use(morgan(morganFormat, {
+            stream: {
+                write: (message: string) => {
+                    logger.info(message.trim(), { 
+                        event: 'http_request',
+                        service: 'proxy'
+                    });
+                }
+            }
+        }));
+    }
     
     // Health check endpoint
-    app.get('/healthz', (_req: Request, res: Response) => {
+    app.get('/healthz', (req: Request, res: Response) => {
+        req.logger?.debug('Health check requested', {
+            event: 'healthz_check',
+            correlationId: req.correlationId
+        });
         res.status(200).send('OK');
     });
 
     // Enhanced health check endpoint with configuration status
-    app.get('/health', (_req: Request, res: Response) => {
+    app.get('/health', (req: Request, res: Response) => {
         const configHealth = {
             status: 'healthy',
             timestamp: new Date().toISOString(),
@@ -117,9 +189,17 @@ export function createApp(
             config: {
                 bffTarget: config.bffTargetUrl,
                 authConfigured: !userTokenConfig.skipVerification,
-                googleAuthConfigured: !googleConfig.skipAuth
+                googleAuthConfigured: !googleConfig.skipAuth,
+                loggingLevel: validatedConfig.logging.level,
+                loggingFormat: validatedConfig.logging.format
             }
         };
+        
+        req.logger?.info('Detailed health check requested', {
+            event: 'health_check',
+            configHealth,
+            correlationId: req.correlationId
+        });
         
         res.json(configHealth);
     });
@@ -132,19 +212,43 @@ export function createApp(
     app.use(express.static(uiDistPath));
 
     // SPA fallback
-    app.get('*', (_req, res) => {
+    app.get('*', (req, res) => {
+        req.logger?.debug('SPA fallback serving index.html', {
+            event: 'spa_fallback',
+            requestedPath: req.path,
+            correlationId: req.correlationId
+        });
         res.sendFile('index.html', { root: uiDistPath });
     });
 
     // ================================
     // Global Error Handler
     // ================================
-    app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
-        console.error('[Global Error Handler]', error.message, error);
+    app.use((error: Error, req: Request, res: Response, _next: NextFunction) => {
+        const requestLogger = req.logger || logger;
+        
+        requestLogger.error('Global error handler triggered', {
+            event: 'global_error',
+            error: {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            },
+            correlationId: req.correlationId,
+            requestPath: req.path,
+            requestMethod: req.method
+        });
 
         // Handle authentication errors
         if (error instanceof UserTokenVerificationError || error instanceof AuthenticationError) {
             const isExpired = (error as UserTokenVerificationError & { isExpired?: boolean }).isExpired === true;
+            
+            requestLogger.warn('Authentication error occurred', {
+                event: 'auth_error',
+                errorType: error.name,
+                isExpired,
+                correlationId: req.correlationId
+            });
             
             return res.status(401).json({
                 error: {
@@ -180,8 +284,18 @@ export function createApp(
         });
     });
 
-    console.log('[Config] targetUrl =', config.bffTargetUrl);
-    console.log('[Config] audience =', config.bffAudience);
+    // Log application startup configuration
+    logger.info('Proxy application configured', {
+        event: 'app_startup',
+        config: {
+            targetUrl: config.bffTargetUrl,
+            audience: config.bffAudience,
+            authSkipped: userTokenConfig.skipVerification,
+            googleAuthSkipped: googleConfig.skipAuth,
+            loggingLevel: validatedConfig.logging.level,
+            environment: process.env.NODE_ENV || 'development'
+        }
+    });
 
     return app;
 } 
