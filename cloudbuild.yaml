@@ -13,6 +13,8 @@ steps:
   # 1. Use Docker for linting and testing (eliminates duplicate npm install)
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
+    env:
+      - 'DOCKER_BUILDKIT=1'
     args:
       - '-c'
       - |
@@ -40,6 +42,8 @@ steps:
   # 2. Build production Docker image (reuses cache from step 1)
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
+    env:
+      - 'DOCKER_BUILDKIT=1'
     args:
       - '-c'
       - |
