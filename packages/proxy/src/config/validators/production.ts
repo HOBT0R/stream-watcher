@@ -11,7 +11,7 @@ export class ProductionValidator extends ConfigValidator {
     
     // BFF configuration - strict validation for production
     let bffTargetUrl: URL;
-    let bffAudience: URL;
+    let bffAudience: string; // Changed to string to preserve exact format
     
     // Handle APP_CONFIG_JSON (Cloud Run secrets) or individual env vars
     if (env.APP_CONFIG_JSON) {
@@ -24,10 +24,12 @@ export class ProductionValidator extends ConfigValidator {
             'cloudRunUrl is required in APP_CONFIG_JSON'
           ));
           bffTargetUrl = new URL('http://invalid');
-          bffAudience = new URL('http://invalid');
+          bffAudience = 'http://invalid';
         } else {
           bffTargetUrl = this.validateUrl(secretConfig.cloudRunUrl, 'APP_CONFIG_JSON.cloudRunUrl');
-          bffAudience = bffTargetUrl; // Same URL for both in production
+          // Validate it's a valid URL but store as string to preserve exact format
+          this.validateUrl(secretConfig.cloudRunUrl, 'APP_CONFIG_JSON.cloudRunUrl');
+          bffAudience = secretConfig.cloudRunUrl;
         }
       } catch (_error) {
         this.errors.push(new ConfigError(
@@ -36,7 +38,7 @@ export class ProductionValidator extends ConfigValidator {
           'must be valid JSON'
         ));
         bffTargetUrl = new URL('http://invalid');
-        bffAudience = new URL('http://invalid');
+        bffAudience = 'http://invalid';
       }
     } else {
       // Fallback to individual environment variables
@@ -44,7 +46,9 @@ export class ProductionValidator extends ConfigValidator {
       const bffAudienceStr = this.required(env.BFF_AUDIENCE, 'BFF_AUDIENCE');
       
       bffTargetUrl = this.validateUrl(bffTargetUrlStr, 'BFF_TARGET_URL');
-      bffAudience = this.validateUrl(bffAudienceStr, 'BFF_AUDIENCE');
+      // Validate it's a valid URL but store as string to preserve exact format
+      this.validateUrl(bffAudienceStr, 'BFF_AUDIENCE');
+      bffAudience = bffAudienceStr;
     }
 
     // User token configuration - strict validation for production
@@ -61,7 +65,8 @@ export class ProductionValidator extends ConfigValidator {
 
     // Google configuration - strict validation for production
     const projectId = this.required(env.GOOGLE_CLOUD_PROJECT, 'GOOGLE_CLOUD_PROJECT');
-    const googleAudience = this.required(env.BFF_AUDIENCE, 'BFF_AUDIENCE');
+    // Use the already parsed bffAudience (works for both APP_CONFIG_JSON and env vars)
+    const googleAudience = bffAudience;
     
     const google = {
       skipAuth: false as const,
@@ -69,12 +74,23 @@ export class ProductionValidator extends ConfigValidator {
       audience: googleAudience
     };
 
+    // Logging configuration - production defaults
+    const logging = {
+      level: env.LOG_LEVEL || 'info',
+      format: 'json' as const,
+      enableRequestLogging: env.ENABLE_REQUEST_LOGGING !== 'false',
+      enableBffTokenLogging: env.LOG_BFF_TOKEN === 'true',
+      enableRequestBodyLogging: env.LOG_REQUEST_BODY === 'true',
+      enableFileLogging: false
+    };
+
     return {
       port,
       bffTargetUrl,
       bffAudience,
       userToken,
-      google
+      google,
+      logging
     };
   }
 } 

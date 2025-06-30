@@ -10,27 +10,39 @@ steps:
           --location=us-central1 \
           --description="Stream Watcher repository for UI and proxy images" || true
 
-  # 1. Install all dependencies
-  - name: 'gcr.io/cloud-builders/npm'
-    args: ['install', '--legacy-peer-deps']
-
-  # 2. Run linter
-  - name: 'gcr.io/cloud-builders/npm'
-    args: ['run', 'lint']
-
-  # 3. Run unit tests
-  - name: 'gcr.io/cloud-builders/npm'
-    args: ['test']
-
-  # 4. Build the Docker image, passing the Firebase config as a build argument
+  # 1. Use Docker for linting and testing (eliminates duplicate npm install)
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        # Pull the latest image for layer caching
+        # Pull cache image first
         docker pull us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:latest || true
         
+        # Build test stage only (stops at ui-builder stage for faster testing)
+        docker build \
+          --target ui-builder \
+          --tag test-image \
+          --cache-from us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:latest \
+          --build-arg FIREBASE_BUILD_ENV="$$FIREBASE_BUILD_ENV" \
+          --build-arg VITE_FIREBASE_PROJECT_ID=$PROJECT_ID \
+          .
+        
+        # Run linting and tests in parallel
+        docker run --rm test-image npm run lint &
+        docker run --rm test-image npm test &
+        
+        # Wait for both to complete
+        wait
+    secretEnv:
+      - 'FIREBASE_BUILD_ENV'
+
+  # 2. Build production Docker image (reuses cache from step 1)
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
         docker build \
           --tag 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:$SHORT_SHA' \
           --tag 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy:latest' \
@@ -41,14 +53,14 @@ steps:
     secretEnv:
       - 'FIREBASE_BUILD_ENV'
 
-  # 5. Push both the versioned and latest images to Google Artifact Registry
+  # 3. Push both the versioned and latest images to Google Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
       - '--all-tags'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/stream-watcher/ui-proxy'
 
-  # 6. Deploy to Cloud Run with runtime secrets for the proxy
+  # 4. Deploy to Cloud Run with runtime secrets for the proxy
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:

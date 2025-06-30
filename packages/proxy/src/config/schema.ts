@@ -1,7 +1,16 @@
 export interface BaseConfig {
   port: number;
   bffTargetUrl: URL;
-  bffAudience: URL;
+  bffAudience: string;
+}
+
+export interface ValidatedLoggingConfig {
+  level: string;
+  format: 'json' | 'simple';
+  enableRequestLogging: boolean;
+  enableBffTokenLogging: boolean;
+  enableRequestBodyLogging: boolean;
+  enableFileLogging: boolean;
 }
 
 export interface ValidatedUserTokenConfig {
@@ -27,6 +36,7 @@ export interface ValidatedGoogleConfig {
 export interface ValidatedAppConfig extends BaseConfig {
   userToken: ValidatedUserTokenConfig;
   google: ValidatedGoogleConfig;
+  logging: ValidatedLoggingConfig;
 }
 
 export interface DevelopmentConfig extends BaseConfig {
@@ -43,6 +53,7 @@ export interface DevelopmentConfig extends BaseConfig {
     skipAuth: true;
     mockToken?: string;
   };
+  logging: ValidatedLoggingConfig;
 }
 
 export interface ProductionConfig extends BaseConfig {
@@ -57,4 +68,5 @@ export interface ProductionConfig extends BaseConfig {
     projectId: string;
     audience: string;
   };
+  logging: ValidatedLoggingConfig;
 } 

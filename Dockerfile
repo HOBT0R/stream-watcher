@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Stage 1: Build the UI
 FROM node:20-alpine AS ui-builder
 WORKDIR /app
@@ -30,8 +31,9 @@ RUN if [ -n "$FIREBASE_BUILD_ENV" ]; then \
 COPY package*.json ./
 COPY packages/proxy/package*.json ./packages/proxy/
 
-# Install dependencies (this layer will be cached if package.json doesn't change)
-RUN npm install --legacy-peer-deps --ignore-scripts
+# Install dependencies with cache mount for faster builds
+RUN --mount=type=cache,target=/root/.npm \
+    npm install --legacy-peer-deps --ignore-scripts
 
 # Copy source code after dependencies are installed
 COPY src ./src
@@ -42,7 +44,8 @@ COPY vite.config.proxy.js ./
 COPY tsconfig.json ./
 COPY tsconfig.node.json ./
 
-RUN npm run build:ui
+# Build UI with optimized settings
+RUN NODE_ENV=production npm run build:ui
 
 # Stage 2: Build the proxy (reuse node_modules from stage 1)
 FROM ui-builder AS proxy-builder
@@ -63,17 +66,26 @@ WORKDIR /app
 COPY package*.json ./
 COPY packages/proxy/package*.json ./packages/proxy/
 
-# Install only production dependencies
-RUN npm install --production --legacy-peer-deps --ignore-scripts
+# Install only production dependencies with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm install --production --legacy-peer-deps --ignore-scripts
 
 # Stage 4: Final runtime image
 FROM node:20-alpine
 WORKDIR /app
 
+# Add non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
 # Copy built artifacts
 COPY --from=ui-builder /app/dist ./dist
 COPY --from=proxy-builder /app/packages/proxy/dist ./packages/proxy/dist
 COPY --from=deps /app/node_modules ./node_modules
+
+# Change ownership to nodejs user
+RUN chown -R nodejs:nodejs /app
+USER nodejs
 
 EXPOSE 8080
 CMD ["node", "packages/proxy/dist/index.js"] 

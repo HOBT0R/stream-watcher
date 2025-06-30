@@ -8,37 +8,41 @@ export class DevelopmentValidator extends ConfigValidator {
     // Base configuration
     const port = this.validatePort(env.PORT, 'PORT', 8080);
     
-    // BFF configuration - allow fallbacks for development
-    const bffTargetUrlStr = this.optional(
-      env.BFF_TARGET_URL || env.BFF_BASE_URL,
-      'http://localhost:3001',
-      'BFF_TARGET_URL'
-    );
+    const bffTargetUrlStr = this.optional(env.BFF_TARGET_URL, 'http://localhost:3001', 'BFF_TARGET_URL');
     const bffTargetUrl = this.validateUrl(bffTargetUrlStr, 'BFF_TARGET_URL');
     
-    const bffAudienceStr = this.optional(
-      env.BFF_AUDIENCE || env.BFF_BASE_URL,
-      'http://localhost:3001',
-      'BFF_AUDIENCE'
-    );
-    const bffAudience = this.validateUrl(bffAudienceStr, 'BFF_AUDIENCE');
+    const bffAudienceStr = this.optional(env.BFF_AUDIENCE, bffTargetUrl.toString(), 'BFF_AUDIENCE');
+    // Validate it's a valid URL but store as string to preserve exact format
+    this.validateUrl(bffAudienceStr, 'BFF_AUDIENCE');
+    const bffAudience = bffAudienceStr;
 
     // User token configuration - flexible for development
-    const skipJwtVerification = this.validateBoolean(env.SKIP_JWT_VERIFY, 'SKIP_JWT_VERIFY', true);
+    const skipUserTokenVerification = env.SKIP_JWT_VERIFY !== 'false';
+    
     const userToken = {
-      skipVerification: skipJwtVerification,
-      publicKey: env.JWT_PUBLIC_KEY, // optional in dev
+      skipVerification: skipUserTokenVerification,
+      publicKey: env.JWT_PUBLIC_KEY,
       mockUser: {
-        sub: 'dev-user-123',
-        email: 'developer@example.com',
-        name: 'Development User'
+        sub: env.MOCK_USER_ID || 'dev-user-123',
+        email: env.MOCK_USER_EMAIL || 'dev@example.com',
+        name: env.MOCK_USER_NAME || 'Dev User'
       }
     };
 
-    // Google configuration - always skip auth in development
+    // Google configuration - always skip in development
     const google = {
       skipAuth: true as const,
-      mockToken: 'dev-service-token'
+      mockToken: env.GOOGLE_MOCK_TOKEN || 'mock-google-token'
+    };
+
+    // Logging configuration
+    const logging = {
+      level: env.LOG_LEVEL || 'debug',
+      format: 'simple' as const,
+      enableRequestLogging: env.ENABLE_REQUEST_LOGGING !== 'false',
+      enableBffTokenLogging: env.LOG_BFF_TOKEN === 'true',
+      enableRequestBodyLogging: env.LOG_REQUEST_BODY !== 'false',
+      enableFileLogging: true
     };
 
     return {
@@ -46,7 +50,8 @@ export class DevelopmentValidator extends ConfigValidator {
       bffTargetUrl,
       bffAudience,
       userToken,
-      google
+      google,
+      logging
     };
   }
 } 
