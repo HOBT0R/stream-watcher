@@ -2,7 +2,7 @@
     "channels": {
         "ndzjdbyygfuljodpgarp0ehqw": {
             "channelName": "ndzjdbyygfuljodpgarp0ehqw",
-            "displayName": "Speedromizer Dummy Channel 1",
+            "displayName": "Runner A1",
             "group": "A",
             "description": "Runner A1",
             "isActive": true,
@@ -10,7 +10,7 @@
         },
         "syopkxqmx24hhrc7wnsidvmlp": {
             "channelName": "syopkxqmx24hhrc7wnsidvmlp",
-            "displayName": "Speedromizer Dummy Channel 2",
+            "displayName": "Runner A2",
             "group": "A",
             "description": "Runner A2",
             "isActive": true,
@@ -18,7 +18,7 @@
         },
         "afrggh4gnis5opnuhuwhsekyf": {
             "channelName": "afrggh4gnis5opnuhuwhsekyf",
-            "displayName": "Speedromizer Dummy Channel 3",
+            "displayName": "Comm A1",
             "group": "A",
             "description": "Comm A1",
             "isActive": true,
@@ -26,7 +26,7 @@
         },
         "qwidleepfp4b1xoelz6bckvhq": {
             "channelName": "qwidleepfp4b1xoelz6bckvhq",
-            "displayName": "Speedromizer Dummy Channel 4",
+            "displayName": "Comm A2",
             "group": "A",
             "description": "Comm A2",
             "isActive": true,
@@ -34,7 +34,7 @@
         },
         "clug1cjslwbj6zneohlwnguhc": {
             "channelName": "clug1cjslwbj6zneohlwnguhc",
-            "displayName": "Speedromizer Dummy Channel 5",
+            "displayName": "Comm A3",
             "group": "A",
             "description": "Comm A3",
             "isActive": true,
@@ -42,7 +42,7 @@
         },
         "4lbx3pudfzow2oj4nixktx992": {
             "channelName": "4lbx3pudfzow2oj4nixktx992",
-            "displayName": "Speedromizer Dummy Channel 6",
+            "displayName": "Comm A4",
             "group": "A",
             "description": "Comm A4",
             "isActive": true,
@@ -50,7 +50,7 @@
         },
         "bdxue31092bxvnc2um3xqccwq": {
             "channelName": "bdxue31092bxvnc2um3xqccwq",
-            "displayName": "Speedromizer Dummy Channel 7",
+            "displayName": "Runner B1",
             "group": "B",
             "description": "Runner B1",
             "isActive": true,
@@ -58,7 +58,7 @@
         },
         "kqyvvduqe3mhvpcptafuq4o5d": {
             "channelName": "kqyvvduqe3mhvpcptafuq4o5d",
-            "displayName": "Speedromizer Dummy Channel 8",
+            "displayName": "Runner B2",
             "group": "B",
             "description": "Runner B2",
             "isActive": true,
@@ -66,7 +66,7 @@
         },
         "uvmhtaqwlvqlx6iycarnfeudx": {
             "channelName": "uvmhtaqwlvqlx6iycarnfeudx",
-            "displayName": "Speedromizer Dummy Channel 9",
+            "displayName": "Comm B1",
             "group": "B",
             "description": "Comm B1",
             "isActive": true,
@@ -74,7 +74,7 @@
         },
         "mzpnirhkhzpfrl9in1qiulapn": {
             "channelName": "mzpnirhkhzpfrl9in1qiulapn",
-            "displayName": "Speedromizer Dummy Channel 10",
+            "displayName": "Comm B2",
             "group": "B",
             "description": "Comm B2",
             "isActive": true,
@@ -82,7 +82,7 @@
         },
         "zdm99jvwbgbf8xuybqvyapdcr": {
             "channelName": "zdm99jvwbgbf8xuybqvyapdcr",
-            "displayName": "Speedromizer Dummy Channel 11",
+            "displayName": "Comm B3",
             "group": "B",
             "description": "Comm B3",
             "isActive": true,
@@ -90,7 +90,7 @@
         },
         "i95fbs2cuthrxkedr09lbtdcc": {
             "channelName": "i95fbs2cuthrxkedr09lbtdcc",
-            "displayName": "Speedromizer Dummy Channel 12",
+            "displayName": "Comm B4",
             "group": "B",
             "description": "Comm B4",
             "isActive": true,
@@ -98,7 +98,7 @@
         },
         "uxdpvcvaj8ge9i3k7ketl4a5j": {
             "channelName": "uxdpvcvaj8ge9i3k7ketl4a5j",
-            "displayName": "Speedromizer Dummy Channel 13",
+            "displayName": "Runner C1",
             "group": "C",
             "description": "Runner C1",
             "isActive": true,
@@ -106,7 +106,7 @@
         },
         "iwekvlpftiibcpav7hnz8lm6s": {
             "channelName": "iwekvlpftiibcpav7hnz8lm6s",
-            "displayName": "Speedromizer Dummy Channel 14",
+            "displayName": "Runner C2",
             "group": "C",
             "description": "Runner C2",
             "isActive": true,
@@ -114,7 +114,7 @@
         },
         "r1tq7uhdxyqr5yln8jeq8bquz": {
             "channelName": "r1tq7uhdxyqr5yln8jeq8bquz",
-            "displayName": "Speedromizer Dummy Channel 15",
+            "displayName": "Comm C1",
             "group": "C",
             "description": "Comm C1",
             "isActive": true,
@@ -122,7 +122,7 @@
         },
         "vou6radbamuh5blqa1i6hjlwl": {
             "channelName": "vou6radbamuh5blqa1i6hjlwl",
-            "displayName": "Speedromizer Dummy Channel 16",
+            "displayName": "Comm C2",
             "group": "C",
             "description": "Comm C2",
             "isActive": true,
@@ -130,7 +130,7 @@
         },
         "5k2gxakvbkws0pkheepgxji5g": {
             "channelName": "5k2gxakvbkws0pkheepgxji5g",
-            "displayName": "Speedromizer Dummy Channel 17",
+            "displayName": "Comm C3",
             "group": "C",
             "description": "Comm C3",
             "isActive": true,
@@ -138,7 +138,7 @@
         },
         "neepvyiwsexntvorat8m7zwqt": {
             "channelName": "neepvyiwsexntvorat8m7zwqt",
-            "displayName": "Speedromizer Dummy Channel 18",
+            "displayName": "Comm C4",
             "group": "C",
             "description": "Comm C4",
             "isActive": true,
@@ -146,7 +146,7 @@
         },
         "kuahpliqh1b7bsayf95xmnyfx": {
             "channelName": "kuahpliqh1b7bsayf95xmnyfx",
-            "displayName": "Speedromizer Dummy Channel 19",
+            "displayName": "Host 1",
             "group": "HOST",
             "description": "Host 1",
             "isActive": true,
@@ -154,7 +154,7 @@
         },
         "53dtyqht5u3qxb10sfxv6mytz": {
             "channelName": "53dtyqht5u3qxb10sfxv6mytz",
-            "displayName": "Speedromizer Dummy Channel 20",
+            "displayName": "Host 2",
             "group": "HOST",
             "description": "Host 2",
             "isActive": true,
@@ -162,7 +162,7 @@
         },
         "ocjmsv9x8xqm4pnp65mzjc25q": {
             "channelName": "ocjmsv9x8xqm4pnp65mzjc25q",
-            "displayName": "Speedromizer Dummy Channel 21",
+            "displayName": "Host 3",
             "group": "HOST",
             "description": "Host 3",
             "isActive": true,
@@ -170,7 +170,7 @@
         },
         "wmihgybu2cj4bicql4srnhntd": {
             "channelName": "wmihgybu2cj4bicql4srnhntd",
-            "displayName": "Speedromizer Dummy Channel 22",
+            "displayName": "Tech Check 1",
             "group": "TECH",
             "description": "Tech Check 1",
             "isActive": true,
@@ -178,7 +178,7 @@
         },
         "mgcabyrau39aitrcbrj6z2bs6": {
             "channelName": "mgcabyrau39aitrcbrj6z2bs6",
-            "displayName": "Speedromizer Dummy Channel 23",
+            "displayName": "Tech Check 2",
             "group": "TECH",
             "description": "Tech Check 2",
             "isActive": true,
@@ -186,7 +186,7 @@
         },
         "ww1whskw9sjysmjqkemg4edbm": {
             "channelName": "ww1whskw9sjysmjqkemg4edbm",
-            "displayName": "Speedromizer Dummy Channel 24",
+            "displayName": "Tech Check 3",
             "group": "TECH",
             "description": "Tech Check 3",
             "isActive": true,
