@@ -274,7 +274,7 @@ The application comes with a set of default channels that are used when no confi
     "channels": {
         "ndzjdbyygfuljodpgarp0ehqw": {
             "channelName": "ndzjdbyygfuljodpgarp0ehqw",
-            "displayName": "Speedromizer Dummy Channel 1",
+            "displayName": "Runner A1",
             "group": "A",
             "description": "Runner A1",
             "isActive": true,
